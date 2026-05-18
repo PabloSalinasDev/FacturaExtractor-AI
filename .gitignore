@@ -1,0 +1,22 @@
+# Build
+build/
+dist/
+*.egg-info/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.Python
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Database local
+*.db
+
+# OS
+.DS_Store
+Thumbs.db

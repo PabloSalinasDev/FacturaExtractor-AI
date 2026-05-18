@@ -1,0 +1,288 @@
+import flet as ft
+import threading
+from pathlib import Path
+import time
+
+from db.crud              import save_factura, get_setting
+from modules.reader       import extract_text
+from modules.file_manager import save_pdf
+from modules.llm_client import get_gpu_status, extract_invoice_data, load_model
+from views.helpers import (
+    card, section_title, lbl, tf, btn_primary, btn_outline,
+    show_snack, ACCENT, PRIMARY, TEXT_DARK, TEXT_GRAY, PENDING, MONEDAS,
+)
+
+def build_extractor(page: ft.Page):
+    state = {
+        "pdf_path":   None,
+        "fuente":     "PDF",
+        "extracting": False,
+    }
+
+    result_area  = ft.Column(visible=False, spacing=8, scroll=ft.ScrollMode.AUTO, expand=True)
+    tf_proveedor = tf("Nombre del proveedor")
+    tf_fecha     = tf("DD-MM-YYYY")
+    tf_monto     = tf("0.00")
+
+    dd_moneda = ft.Dropdown(
+        value="ARS",
+        options=[ft.dropdown.Option(m) for m in MONEDAS],
+        border_color="#dddddd", focused_border_color=ACCENT,
+        border_radius=8, text_size=13,
+        content_padding=ft.padding.symmetric(horizontal=12, vertical=8),
+        width=120,
+    )
+
+    # 1. Nueva Barra de Progreso y Texto Dinámico
+    pb_loading = ft.ProgressBar(width=400, color=ACCENT, visible=False, bgcolor="#eeeeee")
+    lbl_loading = ft.Text("Preparando análisis...", size=13, color=TEXT_GRAY)
+
+    loading_row = ft.Column([ # Cambiado a Column para que la barra esté abajo
+        ft.Row([
+            ft.ProgressRing(width=20, height=20, stroke_width=2, color=ACCENT),
+            lbl_loading,
+        ], spacing=10),
+        pb_loading,
+    ], visible=False, spacing=10)
+
+    fuente_pdf_btn = ft.ElevatedButton(
+        "Archivo PDF",
+        style=ft.ButtonStyle(
+            bgcolor={ft.ControlState.DEFAULT: PRIMARY},
+            color={ft.ControlState.DEFAULT: "white"},
+            shape=ft.RoundedRectangleBorder(radius=8),
+            padding=ft.padding.symmetric(horizontal=20, vertical=12),
+        )
+    )
+    fuente_email_btn = ft.OutlinedButton(
+        "Texto de Email",
+        style=ft.ButtonStyle(
+            side=ft.BorderSide(1.5, PRIMARY),
+            color=PRIMARY,
+            shape=ft.RoundedRectangleBorder(radius=8),
+            padding=ft.padding.symmetric(horizontal=20, vertical=12),
+        )
+    )
+
+    email_area = ft.Column([
+        lbl("Pegá el texto con los datos de la factura:"),
+        tf("Pegá aquí el contenido del texto...", multiline=True, expand=True),
+    ], visible=False, spacing=6, expand=True)
+
+    pdf_info_row = ft.Row([
+        ft.Icon(ft.Icons.PICTURE_AS_PDF, color=ACCENT, size=18),
+        ft.Text("", size=12, color=TEXT_GRAY, expand=True,
+                overflow=ft.TextOverflow.ELLIPSIS),
+    ], visible=False, spacing=6)
+
+    btn_analizar = btn_primary("Analizar con IA", None,
+                                icon=ft.Icons.AUTO_AWESOME, disabled=True)
+
+    def set_fuente_pdf(e):
+        state["fuente"] = "PDF"
+        result_area.visible  = False
+        email_area.visible   = False
+        page.update()
+        file_picker.pick_files(allowed_extensions=["pdf"], allow_multiple=False)
+
+    def set_fuente_email(e):
+        state["fuente"]        = "Email"
+        state["pdf_path"]      = None
+        pdf_info_row.visible   = False
+        email_area.visible     = True
+        result_area.visible    = False
+        btn_analizar.disabled  = False
+        page.update()
+
+    fuente_pdf_btn.on_click   = set_fuente_pdf
+    fuente_email_btn.on_click = set_fuente_email
+
+    def on_file_picked(e: ft.FilePickerResultEvent):
+        if e.files:
+            path = e.files[0].path
+            state["pdf_path"]              = path
+            pdf_info_row.controls[1].value = Path(path).name
+            pdf_info_row.visible           = True
+            btn_analizar.disabled          = False
+            result_area.visible            = False
+            page.update()
+
+    file_picker = ft.FilePicker(on_result=on_file_picked)
+    page.overlay.append(file_picker)
+
+    def do_analyze(e):
+        if state["extracting"]:
+            return
+
+        state["extracting"]   = True
+        btn_analizar.disabled = True
+        loading_row.visible   = True
+        pb_loading.visible    = True # Mostramos la barra
+        pb_loading.value      = 0.0 # Modo indeterminado mientras procesa
+        lbl_loading.value     = "Iniciando motor de IA..."
+        result_area.visible   = False
+        page.update()
+
+        # Flag para detener el hilo de progreso cuando termine la inferencia
+        progress_state = {"stop": False, "current": 0.0}
+
+        def simulate_progress():
+            """Simula progreso progresivo hasta 0.90 mientras la IA trabaja."""
+            gpu = get_gpu_status()
+            # GPU llega a 0.90 en ~8 seg, CPU en ~20 seg
+            step     = 0.020 if gpu else 0.010
+            interval = 0.3
+
+            while not progress_state["stop"]:
+                if progress_state["current"] < 0.90:
+                    progress_state["current"] += step
+                    # Seteamos el valor directamente sin leerlo antes
+                    pb_loading.value = min(progress_state["current"], 0.90)
+                    try:
+                        page.update()
+                    except:
+                        break # Evita errores si se cierra la app
+                time.sleep(interval)
+
+        def run():
+            try:
+                # 1. Aseguramos que el modelo esté cargado
+                load_model()
+
+                gpu_activa = get_gpu_status()
+
+                # 2. Ahora que está cargado, detectamos hardware PARA EL MENSAJE
+                if gpu_activa:
+                    lbl_loading.value = "Extrayendo datos con aceleración por hardware..."
+                else:
+                    lbl_loading.value = "Analizando factura (Modo compatibilidad)..."
+                page.update()
+
+                # Arrancar hilo de progreso simulado
+                t = threading.Thread(target=simulate_progress, daemon=True)
+                t.start()
+
+                if state["fuente"] == "PDF":
+                    text, _ = extract_text(state["pdf_path"])
+                else:
+                    text = email_area.controls[1].value.strip()
+                    if not text:
+                        raise ValueError("El campo de texto está vacío.")
+
+                data = extract_invoice_data(text)
+
+                # Detener progreso y saltar a 100%
+                progress_state["stop"] = True
+                pb_loading.value       = 1.0
+                lbl_loading.value = "Extracción completada"
+                page.update()
+                time.sleep(0.8)
+
+                tf_proveedor.value = data.get("proveedor") or ""
+                tf_fecha.value     = data.get("fecha")     or ""
+                tf_monto.value     = str(data.get("monto") or "")
+                moneda_det         = data.get("moneda")    or "ARS"
+                dd_moneda.value    = moneda_det if moneda_det in MONEDAS else "ARS"
+
+                loading_row.visible   = False
+                result_area.visible   = True
+                btn_analizar.disabled = False
+                state["extracting"]   = False
+                page.update()
+
+            except Exception as ex:
+                loading_row.visible   = False
+                btn_analizar.disabled = False
+                state["extracting"]   = False
+                page.update()
+                show_snack(page, f"Error: {ex}", "#dc3545")
+
+        threading.Thread(target=run, daemon=True).start()
+
+    btn_analizar.on_click = do_analyze
+
+    def do_save(e):
+        proveedor = tf_proveedor.value.strip()
+        fecha     = tf_fecha.value.strip()
+        moneda    = dd_moneda.value
+
+        try:
+            monto = float(tf_monto.value.strip().replace(",", "."))
+        except ValueError:
+            show_snack(page, "El monto debe ser un número válido.", "#dc3545")
+            return
+
+        if not proveedor or not fecha:
+            show_snack(page, "Proveedor y fecha son obligatorios.", "#dc3545")
+            return
+
+        archivo_guardado = None
+        if state["fuente"] == "PDF" and state["pdf_path"]:
+            try:
+                carpeta = get_setting("carpeta_destino") or None
+                archivo_guardado = save_pdf(
+                    state["pdf_path"], proveedor, fecha, monto, moneda, carpeta
+                )
+            except Exception as ex:
+                # show_snack(page, f"No se pudo copiar el PDF: {ex}", PENDING)
+                show_snack(page, f"No se pudo copiar el PDF: {ex} | path: {state['pdf_path']}", "#dc3545")
+
+        save_factura(proveedor, fecha, monto, moneda, state["fuente"], archivo_guardado)
+        show_snack(page, "Factura guardada correctamente")
+
+        tf_proveedor.value             = ""
+        tf_fecha.value                 = ""
+        tf_monto.value                 = ""
+        dd_moneda.value                = "ARS"
+        result_area.visible            = False
+        pdf_info_row.visible           = False
+        email_area.controls[1].value   = ""
+        state["pdf_path"]              = None
+        btn_analizar.disabled          = True
+        page.update()
+
+    result_area.controls = [
+        card(ft.Column([
+            ft.Row([
+                ft.Icon(ft.Icons.CHECK_CIRCLE_OUTLINE, color=ACCENT, size=18),
+                ft.Text("Datos extraídos — revisá y corregí si es necesario",
+                        size=13, weight=ft.FontWeight.BOLD, color=TEXT_DARK),
+            ], spacing=8),
+            ft.Divider(height=1, color="#f0f0f0"),
+            ft.Row([
+                ft.Column([lbl("Proveedor"), tf_proveedor], expand=True),
+                ft.Container(width=12),
+                ft.Column([lbl("Fecha (DD-MM-YYYY)"), tf_fecha], expand=True),
+            ]),
+            ft.Row([
+                ft.Column([lbl("Monto"), tf_monto], expand=True),
+                ft.Container(width=12),
+                ft.Column([lbl("Moneda"), dd_moneda]),
+            ]),
+            ft.Divider(height=1, color="#f0f0f0"),
+            ft.Row([
+                btn_primary("Confirmar y guardar", do_save),
+                ft.Container(width=8),
+                btn_outline("Cancelar",
+                            lambda e: setattr(result_area, "visible", False) or page.update()),
+            ]),
+        ], spacing=8)),
+    ]
+
+    return ft.Column([
+        section_title("Extraer Factura"),
+        ft.Divider(height=1, color="#eeeeee"),
+        card(ft.Column([
+            ft.Text("Seleccioná el origen de la factura",
+                    size=14, weight=ft.FontWeight.BOLD, color=ACCENT),
+            ft.Divider(height=1, color="#f0f0f0"),
+            ft.Row([fuente_pdf_btn, fuente_email_btn], spacing=12),
+            ft.Container(height=4),
+            pdf_info_row,
+            email_area,
+            ft.Container(height=4),
+            loading_row,
+            btn_analizar,
+        ], spacing=8)),
+        result_area,
+    ], spacing=8)
