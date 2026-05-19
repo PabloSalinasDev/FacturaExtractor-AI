@@ -75,7 +75,7 @@ def extract_text_from_pdf(path):
         # - En Edenor: Todo el detalle de subsidios y cuadros tarifarios.
         # - En Musimundo: Todo el detalle de productos.
         if len(lineas) > 25:
-            # Tomamos 35 líneas del principio y 5 del final (por si el CAE está ahí)
+            # Tomamos 25 líneas del principio y 5 del final (por si el CAE está ahí)
             cleaned = "\n".join(lineas[:25]) + "\n" + "\n".join(lineas[-5:])
         else:
             cleaned = "\n".join(lineas)

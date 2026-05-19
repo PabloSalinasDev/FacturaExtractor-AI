@@ -15,6 +15,7 @@ dependencies = [
     "pypdfium2",
     "easyocr",
     "pillow",
+    "matplotlib",
 ]
 
 [tool.setuptools.packages.find]

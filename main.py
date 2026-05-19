@@ -7,6 +7,7 @@ from views.helpers        import PRIMARY, ACCENT, BG, CARD_BG, TEXT_DARK, TEXT_G
 from views.extractor_view import build_extractor
 from views.history_view   import build_history
 from views.settings_view  import build_settings
+from views.charts_view    import build_charts
 
 def main(page: ft.Page):
     page.title             = "FacturaExtractor - Gestión de Facturas con IA"
@@ -34,6 +35,8 @@ def main(page: ft.Page):
             content_area.content = build_extractor(page)
         elif view == "history":
             content_area.content = build_history(page)
+        elif view == "graficos":
+            content_area.content = build_charts(page)
         elif view == "settings":
             content_area.content = build_settings(page)
         page.update()
@@ -51,11 +54,14 @@ def main(page: ft.Page):
                 icon=ft.Icon(ft.Icons.LIST_ALT_OUTLINED, color="#aaaaaa"),
                 selected_icon=ft.Icons.LIST_ALT, label="Historial"),
             ft.NavigationRailDestination(
+                icon=ft.Icon(ft.Icons.BAR_CHART_OUTLINED, color="#aaaaaa"),
+                selected_icon=ft.Icons.BAR_CHART, label="Gráficos"),
+            ft.NavigationRailDestination(
                 icon=ft.Icon(ft.Icons.SETTINGS_OUTLINED, color="#aaaaaa"),
                 selected_icon=ft.Icons.SETTINGS, label="Config"),
         ],
         on_change=lambda e: navigate(
-            ["extractor", "history", "settings"][e.control.selected_index]
+            ["extractor", "history", "graficos", "settings"][e.control.selected_index]
         ),
     )
 

@@ -6,14 +6,12 @@ import re
 from pathlib import Path
 
 # ── MODELO ──────────────────────────────────────────────────────────
-# Se utiliza Qwen-1.5B en formato GGUF (Q4_K_M)
 MODEL_DIR      = Path(os.environ.get("LOCALAPPDATA", ".")) / "PyBloSoft" / "models"
 MODEL_FILENAME = "Qwen2.5-1.5B-Instruct-Q4_K_M.gguf"
 MODEL_PATH     = MODEL_DIR / MODEL_FILENAME
-# URL directa de Hugging Face (Repositorio de bartowski)
 MODEL_URL      = "https://huggingface.co/bartowski/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/Qwen2.5-1.5B-Instruct-Q4_K_M.gguf"
 
-def model_exists() -> bool:
+def model_exists():
     return MODEL_PATH.exists() and MODEL_PATH.stat().st_size > 100_000_000
 
 def download_model(on_progress, on_done, on_error):
@@ -43,7 +41,7 @@ def download_model(on_progress, on_done, on_error):
 
 # ── INFERENCIA ──────────────────────────────────────────────────────
 _llm            = None
-_gpu_activa     = False  # se setea en load_model según qué intentó función
+_gpu_activa     = False
 _physical_cores = max(1, (os.cpu_count() or 4) // 2)
 _logical_cores  = os.cpu_count() or 4
 
@@ -90,7 +88,7 @@ def load_model():
         return None
 
 
-def extract_invoice_data(text: str) -> dict:
+def extract_invoice_data(text):
 
     prompt = (
             f"<|im_start|>system\n"
