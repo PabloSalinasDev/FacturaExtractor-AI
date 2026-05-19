@@ -33,18 +33,6 @@ def build_extractor(page: ft.Page):
         width=120,
     )
 
-    # 1. Nueva Barra de Progreso y Texto Dinámico
-    pb_loading = ft.ProgressBar(width=400, color=ACCENT, visible=False, bgcolor="#eeeeee")
-    lbl_loading = ft.Text("Preparando análisis...", size=13, color=TEXT_GRAY)
-
-    loading_row = ft.Column([ # Cambiado a Column para que la barra esté abajo
-        ft.Row([
-            ft.ProgressRing(width=20, height=20, stroke_width=2, color=ACCENT),
-            lbl_loading,
-        ], spacing=10),
-        pb_loading,
-    ], visible=False, spacing=10)
-
     fuente_pdf_btn = ft.ElevatedButton(
         "Archivo PDF",
         style=ft.ButtonStyle(
@@ -116,49 +104,53 @@ def build_extractor(page: ft.Page):
 
         state["extracting"]   = True
         btn_analizar.disabled = True
-        loading_row.visible   = True
-        pb_loading.visible    = True # Mostramos la barra
-        pb_loading.value      = 0.0 # Modo indeterminado mientras procesa
-        lbl_loading.value     = "Iniciando motor de IA..."
         result_area.visible   = False
         page.update()
 
-        # Flag para detener el hilo de progreso cuando termine la inferencia
         progress_state = {"stop": False, "current": 0.0}
 
+        # ── DIALOG MODAL ─────────────────────────────────────────────
+        pb_dlg  = ft.ProgressBar(width=380, color=ACCENT, bgcolor="#eeeeee")
+        lbl_dlg = ft.Text("Iniciando motor de IA...", size=13, color=TEXT_GRAY)
+
+        dlg = ft.AlertDialog(
+            modal=True,
+            content=ft.Column([
+                ft.Row([
+                    ft.ProgressRing(width=20, height=20, stroke_width=2, color=ACCENT),
+                    lbl_dlg,
+                ], spacing=10),
+                pb_dlg,
+            ], spacing=12, tight=True),
+        )
+        page.overlay.append(dlg)
+        dlg.open = True
+        page.update()
+
         def simulate_progress():
-            """Simula progreso progresivo hasta 0.90 mientras la IA trabaja."""
-            gpu = get_gpu_status()
-            # GPU llega a 0.90 en ~8 seg, CPU en ~20 seg
+            gpu      = get_gpu_status()
             step     = 0.020 if gpu else 0.010
             interval = 0.3
-
             while not progress_state["stop"]:
                 if progress_state["current"] < 0.90:
                     progress_state["current"] += step
-                    # Seteamos el valor directamente sin leerlo antes
-                    pb_loading.value = min(progress_state["current"], 0.90)
+                    pb_dlg.value = min(progress_state["current"], 0.90)
                     try:
                         page.update()
                     except:
-                        break # Evita errores si se cierra la app
+                        break
                 time.sleep(interval)
 
         def run():
             try:
-                # 1. Aseguramos que el modelo esté cargado
                 load_model()
 
-                gpu_activa = get_gpu_status()
-
-                # 2. Ahora que está cargado, detectamos hardware PARA EL MENSAJE
-                if gpu_activa:
-                    lbl_loading.value = "Extrayendo datos con aceleración por hardware..."
+                if get_gpu_status():
+                    lbl_dlg.value = "Extrayendo datos con aceleración por hardware..."
                 else:
-                    lbl_loading.value = "Analizando factura (Modo compatibilidad)..."
+                    lbl_dlg.value = "Analizando factura (Modo compatibilidad)..."
                 page.update()
 
-                # Arrancar hilo de progreso simulado
                 t = threading.Thread(target=simulate_progress, daemon=True)
                 t.start()
 
@@ -171,10 +163,9 @@ def build_extractor(page: ft.Page):
 
                 data = extract_invoice_data(text)
 
-                # Detener progreso y saltar a 100%
                 progress_state["stop"] = True
-                pb_loading.value       = 1.0
-                lbl_loading.value = "Extracción completada"
+                pb_dlg.value           = 1.0
+                lbl_dlg.value          = "Extracción completada"
                 page.update()
                 time.sleep(0.8)
 
@@ -184,16 +175,17 @@ def build_extractor(page: ft.Page):
                 moneda_det         = data.get("moneda")    or "ARS"
                 dd_moneda.value    = moneda_det if moneda_det in MONEDAS else "ARS"
 
-                loading_row.visible   = False
+                dlg.open              = False
                 result_area.visible   = True
                 btn_analizar.disabled = False
                 state["extracting"]   = False
                 page.update()
 
             except Exception as ex:
-                loading_row.visible   = False
-                btn_analizar.disabled = False
-                state["extracting"]   = False
+                progress_state["stop"] = True
+                dlg.open               = False
+                btn_analizar.disabled  = False
+                state["extracting"]    = False
                 page.update()
                 show_snack(page, f"Error: {ex}", "#dc3545")
 
@@ -281,7 +273,6 @@ def build_extractor(page: ft.Page):
             pdf_info_row,
             email_area,
             ft.Container(height=4),
-            loading_row,
             btn_analizar,
         ], spacing=8)),
         result_area,
