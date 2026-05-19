@@ -42,8 +42,8 @@ def build_extractor(page: ft.Page):
             padding=ft.padding.symmetric(horizontal=20, vertical=12),
         )
     )
-    fuente_email_btn = ft.OutlinedButton(
-        "Texto de Email",
+    fuente_mensaje_btn = ft.OutlinedButton(
+        "Texto Mensaje",
         style=ft.ButtonStyle(
             side=ft.BorderSide(1.5, PRIMARY),
             color=PRIMARY,
@@ -52,13 +52,13 @@ def build_extractor(page: ft.Page):
         )
     )
 
-    email_area = ft.Column([
+    mensaje_area = ft.Column([
         lbl("Pegá el texto con los datos de la factura:"),
         tf("Pegá aquí el contenido del texto...", multiline=True, expand=True),
     ], visible=False, spacing=6, expand=True)
 
     pdf_info_row = ft.Row([
-        ft.Icon(ft.Icons.PICTURE_AS_PDF, color=ACCENT, size=18),
+        ft.Icon(ft.Icons.PICTURE_AS_PDF, color="#e74c3c", size=18),
         ft.Text("", size=12, color=TEXT_GRAY, expand=True,
                 overflow=ft.TextOverflow.ELLIPSIS),
     ], visible=False, spacing=6)
@@ -69,21 +69,21 @@ def build_extractor(page: ft.Page):
     def set_fuente_pdf(e):
         state["fuente"] = "PDF"
         result_area.visible  = False
-        email_area.visible   = False
+        mensaje_area.visible   = False
         page.update()
         file_picker.pick_files(allowed_extensions=["pdf"], allow_multiple=False)
 
-    def set_fuente_email(e):
-        state["fuente"]        = "Email"
+    def set_fuente_mensaje(e):
+        state["fuente"]        = "Mensaje"
         state["pdf_path"]      = None
         pdf_info_row.visible   = False
-        email_area.visible     = True
+        mensaje_area.visible     = True
         result_area.visible    = False
         btn_analizar.disabled  = False
         page.update()
 
     fuente_pdf_btn.on_click   = set_fuente_pdf
-    fuente_email_btn.on_click = set_fuente_email
+    fuente_mensaje_btn.on_click = set_fuente_mensaje
 
     def on_file_picked(e: ft.FilePickerResultEvent):
         if e.files:
@@ -157,7 +157,7 @@ def build_extractor(page: ft.Page):
                 if state["fuente"] == "PDF":
                     text, _ = extract_text(state["pdf_path"])
                 else:
-                    text = email_area.controls[1].value.strip()
+                    text = mensaje_area.controls[1].value.strip()
                     if not text:
                         raise ValueError("El campo de texto está vacío.")
 
@@ -216,7 +216,6 @@ def build_extractor(page: ft.Page):
                     state["pdf_path"], proveedor, fecha, monto, moneda, carpeta
                 )
             except Exception as ex:
-                # show_snack(page, f"No se pudo copiar el PDF: {ex}", PENDING)
                 show_snack(page, f"No se pudo copiar el PDF: {ex} | path: {state['pdf_path']}", "#dc3545")
 
         save_factura(proveedor, fecha, monto, moneda, state["fuente"], archivo_guardado)
@@ -228,7 +227,7 @@ def build_extractor(page: ft.Page):
         dd_moneda.value                = "ARS"
         result_area.visible            = False
         pdf_info_row.visible           = False
-        email_area.controls[1].value   = ""
+        mensaje_area.controls[1].value   = ""
         state["pdf_path"]              = None
         btn_analizar.disabled          = True
         page.update()
@@ -268,12 +267,14 @@ def build_extractor(page: ft.Page):
             ft.Text("Seleccioná el origen de la factura",
                     size=14, weight=ft.FontWeight.BOLD, color=ACCENT),
             ft.Divider(height=1, color="#f0f0f0"),
-            ft.Row([fuente_pdf_btn, fuente_email_btn], spacing=12),
+            ft.Row([fuente_pdf_btn, fuente_mensaje_btn], spacing=12),
             ft.Container(height=4),
             pdf_info_row,
-            email_area,
+            mensaje_area,
             ft.Container(height=4),
             btn_analizar,
+            ft.Text("* Si la factura no tiene un formato estándar la IA podría tener algún error de reconocimiento de los datos.",
+                    size=10, weight=ft.FontWeight.BOLD, color=TEXT_GRAY),
         ], spacing=8)),
         result_area,
     ], spacing=8)

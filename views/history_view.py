@@ -44,7 +44,7 @@ def build_history(page: ft.Page):
         options=[
             ft.dropdown.Option("todos", "Todos"),
             ft.dropdown.Option("PDF",   "PDF"),
-            ft.dropdown.Option("Email", "Email"),
+            ft.dropdown.Option("Mensaje", "Mensaje"),
         ],
         border_color="#dddddd", focused_border_color=ACCENT,
         border_radius=8, text_size=13,
