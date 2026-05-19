@@ -110,7 +110,7 @@ def build_extractor(page: ft.Page):
         progress_state = {"stop": False, "current": 0.0}
 
         # ── DIALOG MODAL ─────────────────────────────────────────────
-        pb_dlg  = ft.ProgressBar(width=380, color=ACCENT, bgcolor="#eeeeee")
+        pb_dlg  = ft.ProgressBar(width=380, color=ACCENT, border_radius=5, bgcolor="#eeeeee")
         lbl_dlg = ft.Text("Iniciando motor de IA...", size=13, color=TEXT_GRAY)
 
         dlg = ft.AlertDialog(
