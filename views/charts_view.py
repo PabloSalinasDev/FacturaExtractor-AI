@@ -3,14 +3,17 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
+from pathlib import Path
 import io
 import base64
 from collections import defaultdict
 
 from db.crud import get_all_facturas
+from modules.csv_exporter import export_reporte_csv
 from views.helpers import (
     card, section_title,
-    ACCENT, PRIMARY, TEXT_GRAY,
+    ACCENT, PRIMARY, TEXT_GRAY, show_snack, PENDING,
+    btn_outline,
 )
 
 # ── COLORES MATPLOTLIB ──────────────────────────
@@ -183,6 +186,17 @@ def build_charts(page):
             padding=ft.padding.symmetric(horizontal=20, vertical=11),
         )
 
+    def do_export(e):
+        data = _get_data()
+        if not data:
+            show_snack(page, "No hay datos para exportar.", PENDING)
+            return
+        path = export_reporte_csv(data)
+        show_snack(page, f"Reporte exportado: {Path(path).name}")
+
+    btn_export = btn_outline("Exportar Reporte", do_export,
+                            icon=ft.Icons.DOWNLOAD, color=PRIMARY)
+
     def show_chart(chart_fn, btn):
         _set_active(btn)
         data = _get_data()
@@ -210,7 +224,7 @@ def build_charts(page):
             ft.Text("Seleccioná el período", size=14,
                     weight=ft.FontWeight.BOLD, color=ACCENT),
             ft.Divider(height=1, color="#f0f0f0"),
-            ft.Row([btn_dia, btn_mes, btn_anio], spacing=12),
+            ft.Row([btn_dia, btn_mes, btn_anio, btn_export], spacing=12),
         ], spacing=8)),
         chart_container,
         no_data_container,
