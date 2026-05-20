@@ -85,7 +85,7 @@ def main(page: ft.Page):
 
     # ── PANTALLA DE DESCARGA ─────────────────────────────────────────
     def show_download_screen():
-        progress_bar = ft.ProgressBar(value=0, color=ACCENT, border_radius=5, bgcolor="#e0e0e0", width=420)
+        progress_bar = ft.ProgressBar(value=0, color=ACCENT, height=6, border_radius=5, bgcolor="#e0e0e0", width=420)
         pct_lbl      = ft.Text("0%", size=13, color=TEXT_DARK, weight=ft.FontWeight.BOLD)
         size_lbl     = ft.Text("0 GB / 0.92 GB", size=12, color=TEXT_GRAY)
         status_lbl   = ft.Text("Preparando descarga...", size=12, color=TEXT_GRAY)
@@ -154,7 +154,7 @@ def main(page: ft.Page):
                                 weight=ft.FontWeight.BOLD, color=TEXT_DARK),
                         ft.Text(
                             "El tiempo de extracción depende del hardware de tu equipo.\n"
-                            "Con GPU dedicada: ~8 segundos. Solo CPU: ~30 segundos.",
+                            "Con GPU dedicada: ~8 segundos. Solo CPU: ~40 segundos.",
                             size=11, color=TEXT_GRAY, text_align=ft.TextAlign.CENTER,
                         ),
                         ft.Text(

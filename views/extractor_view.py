@@ -110,7 +110,7 @@ def build_extractor(page: ft.Page):
         progress_state = {"stop": False, "current": 0.0}
 
         # ── DIALOG MODAL ─────────────────────────────────────────────
-        pb_dlg  = ft.ProgressBar(width=380, color=ACCENT, border_radius=5, bgcolor="#eeeeee")
+        pb_dlg  = ft.ProgressBar(width=380, height=6, color=ACCENT, border_radius=5, bgcolor="#eeeeee")
         lbl_dlg = ft.Text("Iniciando motor de IA...", size=13, color=TEXT_GRAY)
 
         dlg = ft.AlertDialog(
@@ -129,7 +129,7 @@ def build_extractor(page: ft.Page):
 
         def simulate_progress():
             gpu      = get_gpu_status()
-            step     = 0.020 if gpu else 0.010
+            step     = 0.005 if gpu else 0.001
             interval = 0.3
             while not progress_state["stop"]:
                 if progress_state["current"] < 0.90:
@@ -273,7 +273,7 @@ def build_extractor(page: ft.Page):
             mensaje_area,
             ft.Container(height=4),
             btn_analizar,
-            ft.Text("* Si la factura no tiene un formato estándar la IA podría tener algún error de reconocimiento de los datos.",
+            ft.Text("* Si la factura no tiene un formato estándar o es escaneada la IA podría tener algún error de reconocimiento de los datos.",
                     size=10, weight=ft.FontWeight.BOLD, color=TEXT_GRAY),
         ], spacing=8)),
         result_area,
