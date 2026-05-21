@@ -51,11 +51,15 @@ def _style_ax(ax, title, xlabel, ylabel):
     ax.spines["bottom"].set_color(GRID_COLOR)
 
 
-def _build_chart_image(labels, values, title, xlabel):
+# Recibe el parámetro 'moneda' para setear el eje Y correctamente
+def _build_chart_image(labels, values, title, xlabel, moneda):
     ancho_dinamico = max(6, len(labels) * 0.5)
     fig, ax = plt.subplots(figsize=(ancho_dinamico, 4))
     bars = ax.bar(labels, values, color=BAR_COLOR, edgecolor=BAR_EDGE,
                 linewidth=0.6, width=0.55, zorder=3)
+    
+    if len(labels) == 1:
+            ax.set_xlim(-1, 1)
 
     # Valor encima de cada barra
     for bar in bars:
@@ -66,7 +70,8 @@ def _build_chart_image(labels, values, title, xlabel):
             fontsize=8, color=TITLE_COLOR,
         )
 
-    _style_ax(ax, title, xlabel, "Monto (ARS)")
+    # Pasamos la moneda dinámica al label del eje Y
+    _style_ax(ax, title, xlabel, f"Monto ({moneda})")
     if len(labels) > 6:
         plt.xticks(rotation=30, ha="right")
     else:
@@ -91,10 +96,9 @@ def _get_data():
     rows = get_all_facturas()
     result = []
     for row in rows:
-        # MAPEO CON LOS ÍNDICES VERDADEROS DE TU TABLA:
-        fecha_cruda  = row[2]  # Columna 'fecha'
-        monto_crudo  = row[3]  # Columna 'monto'
-        moneda_cruda = row[4]  # Columna 'moneda'
+        fecha_cruda  = row[2]  
+        monto_crudo  = row[3]  
+        moneda_cruda = row[4]  
         
         parsed = _parse_fecha(fecha_cruda)
         if parsed:
@@ -109,7 +113,7 @@ def _get_data():
     return result
 
 
-def _chart_por_dia(data):
+def _chart_por_dia(data, moneda):
     totales = defaultdict(float)
     for r in data:
         key = (r["anio"], r["mes"], r["dia"])
@@ -126,10 +130,10 @@ def _chart_por_dia(data):
     labels = [f"{d:02d}-{m:02d}-{y}" for y, m, d in keys_sorted]
     values = [totales[k] for k in keys_sorted]
     
-    return _build_chart_image(labels, values, "Gastos por Día (Últimos 30 días con actividad)", "Fecha")
+    return _build_chart_image(labels, values, f"Gastos por Día (Últimos 30 días con actividad)", "Fecha", moneda)
 
 
-def _chart_por_mes(data):
+def _chart_por_mes(data, moneda):
     MESES = ["Ene","Feb","Mar","Abr","May","Jun",
             "Jul","Ago","Sep","Oct","Nov","Dic"]
     totales = defaultdict(float)
@@ -141,10 +145,10 @@ def _chart_por_mes(data):
     keys_sorted = sorted(totales.keys())
     labels = [f"{MESES[m-1]} {y}" for y, m in keys_sorted]
     values = [totales[k] for k in keys_sorted]
-    return _build_chart_image(labels, values, "Gastos por Mes", "Mes")
+    return _build_chart_image(labels, values, "Gastos por Mes", "Mes", moneda)
 
 
-def _chart_por_anio(data):
+def _chart_por_anio(data, moneda):
     totales = defaultdict(float)
     for r in data:
         totales[r["anio"]] += r["monto"]
@@ -153,7 +157,7 @@ def _chart_por_anio(data):
     keys   = sorted(totales.keys())
     labels = [str(k) for k in keys]
     values = [totales[k] for k in keys]
-    return _build_chart_image(labels, values, "Gastos por Año", "Año")
+    return _build_chart_image(labels, values, "Gastos por Año", "Año", moneda)
 
 
 def build_charts(page):
@@ -185,12 +189,13 @@ def build_charts(page):
     )
 
     # Estado del botón activo
-    active = {"btn": None}
+    active = {"btn": None, "fn": None}
 
-    def _set_active(btn):
+    def _set_active(btn, chart_fn):
         for b in [btn_dia, btn_mes, btn_anio]:
             b.style = _btn_style(b == btn)
         active["btn"] = btn
+        active["fn"] = chart_fn
         page.update()
 
     def _btn_style(selected):
@@ -220,9 +225,18 @@ def build_charts(page):
                             icon=ft.Icons.DOWNLOAD, color=PRIMARY)
 
     def show_chart(chart_fn, btn):
-        _set_active(btn)
-        data = _get_data()
-        b64  = chart_fn(data)
+        _set_active(btn, chart_fn)
+        data_total = _get_data()
+        
+        # Se filtra la data en memoria por la moneda seleccionada en el Dropdown
+        moneda_seleccionada = dd_moneda.value
+        data_filtrada = [r for r in data_total if r["moneda"] == moneda_seleccionada]
+        
+        if data_filtrada:
+            b64 = chart_fn(data_filtrada, moneda_seleccionada)
+        else:
+            b64 = None
+
         if b64:
             img_control.src_base64    = b64
             chart_container.visible   = True
@@ -231,6 +245,24 @@ def build_charts(page):
             chart_container.visible   = False
             no_data_container.visible = True
         page.update()
+
+    dd_moneda = ft.Dropdown(
+        label="Moneda",
+        width=110,
+        color=PRIMARY,
+        border_color=PRIMARY,
+        label_style=ft.TextStyle(color=PRIMARY, size=12, weight=ft.FontWeight.BOLD),
+        border_width=1.5,
+        options=[
+            ft.dropdown.Option("ARS"),
+            ft.dropdown.Option("USD"),
+            ft.dropdown.Option("EUR"),
+            ft.dropdown.Option("BRL"),
+        ],
+        value="ARS",
+        # Al cambiar la moneda, si hay un gráfico seleccionado previamente, lo vuelve a dibujar con el nuevo filtro
+        on_change=lambda e: show_chart(active["fn"], active["btn"]) if active["fn"] else page.update()
+    )
 
     btn_dia  = ft.ElevatedButton("Por Día",  style=_btn_style(False),
                                 on_click=lambda e: show_chart(_chart_por_dia,  btn_dia))
@@ -243,10 +275,10 @@ def build_charts(page):
         section_title("Gráficas de Gastos"),
         ft.Divider(height=1, color="#eeeeee"),
         card(ft.Column([
-            ft.Text("Seleccioná el período", size=14,
+            ft.Text("Seleccioná el período y divisa", size=14,
                     weight=ft.FontWeight.BOLD, color=ACCENT),
             ft.Divider(height=1, color="#f0f0f0"),
-            ft.Row([btn_dia, btn_mes, btn_anio, btn_export], spacing=12),
+            ft.Row([btn_dia, btn_mes, btn_anio, dd_moneda, btn_export], spacing=12),
         ], spacing=8)),
         chart_container,
         no_data_container,
