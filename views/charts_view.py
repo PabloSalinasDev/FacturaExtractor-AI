@@ -91,10 +91,21 @@ def _get_data():
     rows = get_all_facturas()
     result = []
     for row in rows:
-        parsed = _parse_fecha(row[2])
+        # MAPEO CON LOS ÍNDICES VERDADEROS DE TU TABLA:
+        fecha_cruda  = row[2]  # Columna 'fecha'
+        monto_crudo  = row[3]  # Columna 'monto'
+        moneda_cruda = row[4]  # Columna 'moneda'
+        
+        parsed = _parse_fecha(fecha_cruda)
         if parsed:
             d, m, y = parsed
-            result.append({"dia": d, "mes": m, "anio": y, "monto": float(row[3])})
+            result.append({
+                "dia": d, 
+                "mes": m, 
+                "anio": y, 
+                "monto": float(monto_crudo),
+                "moneda": str(moneda_cruda).upper() if moneda_cruda else "ARS"
+            })
     return result
 
 
