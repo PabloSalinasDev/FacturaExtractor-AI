@@ -7,6 +7,7 @@ from pathlib import Path
 import io
 import base64
 from collections import defaultdict
+from datetime import datetime
 
 from db.crud import get_all_facturas
 from modules.csv_exporter import export_reporte_csv
@@ -51,7 +52,8 @@ def _style_ax(ax, title, xlabel, ylabel):
 
 
 def _build_chart_image(labels, values, title, xlabel):
-    fig, ax = plt.subplots(figsize=(9, 4))
+    ancho_dinamico = max(6, len(labels) * 0.5)
+    fig, ax = plt.subplots(figsize=(ancho_dinamico, 4))
     bars = ax.bar(labels, values, color=BAR_COLOR, edgecolor=BAR_EDGE,
                 linewidth=0.6, width=0.55, zorder=3)
 
@@ -65,26 +67,28 @@ def _build_chart_image(labels, values, title, xlabel):
         )
 
     _style_ax(ax, title, xlabel, "Monto (ARS)")
-    plt.xticks(rotation=45 if len(labels) > 6 else 0, ha="right")
+    if len(labels) > 6:
+        plt.xticks(rotation=30, ha="right")
+    else:
+        plt.xticks(rotation=0, ha="center")
     fig.tight_layout()
     return _fig_to_base64(fig)
 
 
-def _parse_fecha(fecha):
-    """Intenta parsear DD-MM-YYYY o DD/MM/YYYY. Retorna (dia, mes, anio) o None."""
-    for sep in ("-", "/"):
-        parts = fecha.split(sep)
-        if len(parts) == 3:
-            try:
-                return int(parts[0]), int(parts[1]), int(parts[2])
-            except ValueError:
-                pass
-    return None
-
+def _parse_fecha(fecha_str):
+    """
+    Parsea de forma segura la fecha garantizada como DD-MM-YYYY de la BD.
+    Devuelve una tupla de 3 enteros: (dia, mes, anio).
+    """
+    try:
+        dt = datetime.strptime(fecha_str.strip(), "%d-%m-%Y")
+        return dt.day, dt.month, dt.year
+    except (ValueError, AttributeError, TypeError):
+        hoy = datetime.now()
+        return hoy.day, hoy.month, hoy.year
 
 def _get_data():
     rows = get_all_facturas()
-    # rows: id, proveedor, fecha, monto, moneda, estado, fuente, archivo, created_at
     result = []
     for row in rows:
         parsed = _parse_fecha(row[2])
@@ -99,12 +103,19 @@ def _chart_por_dia(data):
     for r in data:
         key = (r["anio"], r["mes"], r["dia"])
         totales[key] += r["monto"]
+
     if not totales:
         return None
+
     keys_sorted = sorted(totales.keys())
+    
+    if len(keys_sorted) > 30:
+        keys_sorted = keys_sorted[-30:]
+
     labels = [f"{d:02d}-{m:02d}-{y}" for y, m, d in keys_sorted]
     values = [totales[k] for k in keys_sorted]
-    return _build_chart_image(labels, values, "Gastos por Día", "Fecha")
+    
+    return _build_chart_image(labels, values, "Gastos por Día (Últimos 30 días con actividad)", "Fecha")
 
 
 def _chart_por_mes(data):
