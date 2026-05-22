@@ -7,8 +7,15 @@ DB_PATH = DB_DIR / "facturas.db"
 
 
 def get_conn():
+
     DB_DIR.mkdir(parents=True, exist_ok=True)
-    return sqlite3.connect(DB_PATH)
+    
+    conn = sqlite3.connect(str(DB_PATH), timeout=30.0)
+
+    conn.execute("PRAGMA journal_mode=WAL;")
+    conn.execute("PRAGMA synchronous=NORMAL;")
+    
+    return conn
 
 
 def init_db():
