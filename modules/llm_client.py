@@ -72,7 +72,7 @@ def load_model():
     
     # INTENTO 1: GPU DEDICADA
     try:
-        _llm        = Llama(**common_params, n_gpu_layers=99, flash_attn=True)
+        _llm        = Llama(**common_params, n_gpu_layers=-1, flash_attn=True)
         _gpu_activa = True
         return _llm
     except Exception:
@@ -89,6 +89,12 @@ def load_model():
 
 
 def extract_invoice_data(text):
+    """
+    Analiza el texto de la factura forzando un formato JSON válido
+    mediante el uso de LlamaGrammar nativo.
+    """
+
+    from llama_cpp.llama_grammar import LlamaGrammar
 
     prompt = (
             f"<|im_start|>system\n"
@@ -100,14 +106,24 @@ def extract_invoice_data(text):
             f"- proveedor: nombre del emisor\n"
             f"- fecha: formato DD-MM-YYYY\n"
             f"- monto: valor numérico total\n"
-            f"- moneda: código ISO (ARS, USD, etc)\n\n"
+            f"- moneda: código ISO (ARS, USD, EUR, BRL)\n\n"
             f"Texto completo:\n{text}\n"
             f"<|im_end|>\n"
             f"<|im_start|>assistant\n"
-            f"{{\"proveedor\":" # Forzamos el inicio de la respuesta
         )
 
     llm = load_model()
+    grammar_object = LlamaGrammar.from_string(r"""
+        root   ::= object
+        value  ::= object | array | string | number | boolean | null
+        object ::= "{" ws (string ":" ws value ("," ws string ":" ws value)*)? ws "}"
+        array  ::= "[" ws (value ("," ws value)*)? ws "]"
+        string ::= "\"" ([^\\"\x7F\x00-\x1F] | "\\" (["\\/bfnrt] | "u" [0-9a-fA-F]{4}))* "\""
+        number ::= "-"? ([0-9] | [1-9] [0-9]*) ("." [0-9]+)? ([eE] [-+]? [0-9]+)?
+        boolean ::= "true" | "false"
+        null    ::= "null"
+        ws     ::= [ \t\n]*
+        """)
     output = llm(
         prompt,
         max_tokens=200,    # Suficiente para un JSON corto
@@ -116,17 +132,25 @@ def extract_invoice_data(text):
         top_p=1.0,
         stop=["<|im_end|>", "###"],
         echo=False,
+        grammar=grammar_object
     )
 
-    # Reconstruimos el JSON ya que forzamos el inicio
-    raw = '{"proveedor":' + output["choices"][0]["text"].strip()
+    raw = output["choices"][0]["text"].strip()
     
-    # Limpieza de seguridad por si el modelo agrega texto extra al final
-    match = re.search(r'\{.*\}', raw, re.DOTALL)
-    if not match:
-        return {"proveedor": None, "fecha": None, "monto": None, "moneda": "ARS"}
+    # Limpieza de caracteres de control invisibles
+    raw = re.sub(r'[\x00-\x1F\x7F]', '', raw)
 
     try:
-        return json.loads(match.group())
-    except json.JSONDecodeError:
-        return {"proveedor": None, "fecha": None, "monto": None, "moneda": "ARS"}
+        data = json.loads(raw)
+        if "moneda" in data:
+            data["moneda"] = str(data["moneda"]).upper()
+        return data
+    except Exception as e:
+        print(f"[LLM ERROR] JSON inválido: {e}. Raw output: {raw}")
+        # Fallback seguro pero con strings vacíos y monto 0.0 para cuidar la DB
+        return {
+            "proveedor": "Desconocido",
+            "fecha": "",
+            "monto": 0.0,
+            "moneda": "ARS"
+        }
