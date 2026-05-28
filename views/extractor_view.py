@@ -2,6 +2,7 @@ import flet as ft
 import threading
 from pathlib import Path
 import time
+import logging
 
 from db.crud              import save_factura, get_setting
 from modules.reader       import extract_text
@@ -182,6 +183,8 @@ def build_extractor(page: ft.Page):
                 state["extracting"]    = False
                 page.update()
                 show_snack(page, f"Error: {ex}", ERROR)
+                logging.warning("Error: %s", ex)
+
 
         threading.Thread(target=run, daemon=True).start()
 
@@ -211,7 +214,7 @@ def build_extractor(page: ft.Page):
                 )
             except Exception as ex:
                 show_snack(page, f"No se pudo copiar el PDF: {ex} | path: {state['pdf_path']}", ERROR)
-
+                logging.warning("No se pudo copiar el PDF: %s | path:%s", ex, state["pdf_path"])
         save_factura(proveedor, fecha, monto, moneda, state["fuente"], archivo_guardado)
         show_snack(page, "Factura guardada correctamente")
 

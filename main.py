@@ -1,4 +1,8 @@
 import flet as ft
+import os
+import logging
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 import time
 import threading
 
@@ -10,6 +14,32 @@ from views.extractor_view import build_extractor
 from views.history_view   import build_history
 from views.settings_view  import build_settings
 from views.charts_view    import build_charts
+
+
+# Carpeta de la App donde se va a guardar el archivo de log
+BASE_DIR = Path(os.environ.get("LOCALAPPDATA")) / "FacturaExtractor"
+LOG_DIR  = BASE_DIR / "logs"
+
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+ruta_log = LOG_DIR / "debug.log"
+
+# Se configura el Handler Rotativo
+# maxBytes = 5 * 1024 * 1024 (5 Megabytes)
+# backupCount = 1 (mantiene el archivo actual y uno anterior de respaldo)
+handler = RotatingFileHandler(
+    ruta_log, 
+    maxBytes=5*1024*1024, 
+    backupCount=1, 
+    encoding='utf-8'
+)
+
+# Configuración del logging
+logging.basicConfig(
+    level=logging.WARNING,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[handler]
+)
 
 def main(page: ft.Page):
     page.title             = "FacturaExtractor - Gestión de Facturas con IA"

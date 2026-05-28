@@ -6,6 +6,7 @@ import json
 import re
 import time
 import subprocess
+import logging
 
 # Bandera global para saber si contamos con psutil de manera segura
 try:
@@ -22,7 +23,7 @@ _n_threads_optimized = max(1, _physical_cores)
 _n_threads_batch_optimized = max(1, _logical_cores)
 
 from modules.config  import MODEL_PATH, PORT
-from views.helpers   import show_snack, ERROR
+from views.helpers   import show_snack
 
 
 def start_daemon(page: ft.Page):
@@ -74,7 +75,7 @@ def start_daemon(page: ft.Page):
             continue
             
     if not server_ready:
-        print("✗ Error: el daemon del servidor tardó demasiado en cargarse en la RAM.")
+        logging.warning("✗ Error: el daemon del servidor tardó demasiado en cargarse en la RAM.")
         return
 
     # Se fuerza al mensaje a cargarse al inicio (Precalentamiento)
@@ -93,17 +94,17 @@ def stop_daemon():
     """Encuentra el proceso del servidor en segundo plano y lo finaliza para liberar memoria."""
     # CORRECCIÓN: Usamos la bandera global para verificar si psutil está disponible
     if not _HAS_PSUTIL:
-        print("Error al cerrar la sesión. La librería 'psutil' no está disponible.")
+        logging.warning("Error al cerrar la sesión. La librería 'psutil' no está disponible.")
         return
 
     try:
         for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
             if proc.info['cmdline'] and "llama_cpp.server" in " ".join(proc.info['cmdline']):
                 proc.terminate()
-                print("✓ La sesión se cerró con éxito. RAM liberada.")
+                logging.info("✓ La sesión se cerró con éxito. RAM liberada.")
                 return
     except Exception as e:
-        print(f"[PROCESS ERROR] No se pudo terminar el daemon: {e}")
+        logging.warning("[PROCESS ERROR] No se pudo terminar el daemon: %s", e)
 
 
 def extract_invoice_data(text):
@@ -169,7 +170,7 @@ def extract_invoice_data(text):
         return data
 
     except Exception as e:
-        print(f"[LLM ERROR] Falló la extracción veloz: {e}. Raw: '{json_clean}'")
+        logging.warning("[LLM ERROR] Falló la extracción veloz: %s. Raw: '%s'", e, json_message)
         return {
             "proveedor": "Desconocido",
             "fecha": "",

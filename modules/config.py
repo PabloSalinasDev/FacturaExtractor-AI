@@ -3,7 +3,7 @@ import threading
 from pathlib import Path
 
 
-MODEL_DIR      = Path(os.environ.get("LOCALAPPDATA", ".")) / "PyBloSoft" / "models"
+MODEL_DIR      = Path(os.environ.get("LOCALAPPDATA", ".")) / "FacturaExtractor" / "models"
 MODEL_FILENAME = "Qwen2.5-1.5B-Instruct-Q4_K_M.gguf"
 MODEL_PATH     = MODEL_DIR / MODEL_FILENAME
 MODEL_URL      = "https://huggingface.co/bartowski/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/Qwen2.5-1.5B-Instruct-Q4_K_M.gguf"

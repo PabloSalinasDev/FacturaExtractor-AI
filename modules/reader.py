@@ -1,5 +1,6 @@
 import flet as ft
 import re
+import logging
 from pathlib         import Path
 
 from views.helpers   import show_snack, ERROR
@@ -64,6 +65,7 @@ def extract_text_from_pdf(path, page=ft.Page):
 
     except Exception as e:
         show_snack(page, "Error leyendo PDF", ERROR)
+        logging.warning("Error leyendo PDF: %s", e)
         raise RuntimeError(f"Error leyendo PDF: {e}") from e
 
 def extract_text_from_scanned_pdf(path, page=ft.Page):
@@ -86,9 +88,12 @@ def extract_text_from_scanned_pdf(path, page=ft.Page):
         return clean_text("\n".join(textos))
 
     except ImportError as e:
+        show_snack(page, "Dependencia faltante para OCR", ERROR)
+        logging.warning("Dependencia faltante para OCR: %s", e)
         raise RuntimeError(f"Dependencia faltante para OCR: {e}") from e
     except Exception as e:
         show_snack(page, "Error leyendo PDF", ERROR)
+        logging.warning("Error en OCR: %s", e)
         raise RuntimeError(f"Error en OCR: {e}") from e
 
 
@@ -99,6 +104,7 @@ def extract_text(path, page=ft.Page):
     p = Path(path)
     if p.suffix.lower() != ".pdf":
         show_snack(page, "Formato no soportado", ERROR)
+        logging.warning("Formato no soportado: %s", p.suffix)
         raise ValueError(f"Formato no soportado: {p.suffix}")
 
     # 1. Extracción cruda (Nativa o por OCR)
