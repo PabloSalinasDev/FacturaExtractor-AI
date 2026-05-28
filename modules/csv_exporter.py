@@ -31,7 +31,7 @@ def export_reporte_csv(data, custom_path=None):
     """
     Genera el reporte respetando el diseño original del proyecto (Repomix)
     pero repitiendo las secciones por cada moneda de forma aislada.
-    Garantiza que TODO el archivo tenga una estructura fija de 2 columnas,
+    Garantiza que todo el archivo tenga una estructura fija de 2 columnas,
     haciendo que los visores estrictos y Excel lo abran de forma impecable.
     """
     MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio",

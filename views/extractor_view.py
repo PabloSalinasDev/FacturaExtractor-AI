@@ -6,10 +6,10 @@ import time
 from db.crud              import save_factura, get_setting
 from modules.reader       import extract_text
 from modules.file_manager import save_pdf
-from modules.llm_client import get_gpu_status, extract_invoice_data, load_model
-from views.helpers import (
+from modules.llm_client   import extract_invoice_data
+from views.helpers        import (
     card, section_title, lbl, tf, btn_primary, btn_outline,
-    show_snack, ACCENT, PRIMARY, TEXT_DARK, TEXT_GRAY, PENDING, MONEDAS,
+    show_snack, ACCENT, PRIMARY, TEXT_DARK, TEXT_GRAY, MONEDAS,
 )
 
 def build_extractor(page: ft.Page):
@@ -128,8 +128,7 @@ def build_extractor(page: ft.Page):
         page.update()
 
         def simulate_progress():
-            gpu      = get_gpu_status()
-            step     = 0.005 if gpu else 0.001
+            step     = 0.005
             interval = 0.3
             while not progress_state["stop"]:
                 if progress_state["current"] < 0.90:
@@ -143,12 +142,7 @@ def build_extractor(page: ft.Page):
 
         def run():
             try:
-                load_model()
-
-                if get_gpu_status():
-                    lbl_dlg.value = "Extrayendo datos con aceleración por hardware..."
-                else:
-                    lbl_dlg.value = "Analizando factura (Modo compatibilidad)..."
+                lbl_dlg.value = "Analizando factura..."
                 page.update()
 
                 t = threading.Thread(target=simulate_progress, daemon=True)

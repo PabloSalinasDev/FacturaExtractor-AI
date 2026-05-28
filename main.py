@@ -1,8 +1,10 @@
 import flet as ft
 import time
+import threading
 
 from db.database          import init_db
-from modules.llm_client   import model_exists, download_model
+from modules.config       import model_exists, download_model
+from modules.llm_client   import start_daemon, stop_daemon
 from views.helpers        import PRIMARY, ACCENT, BG, CARD_BG, TEXT_DARK, TEXT_GRAY
 from views.extractor_view import build_extractor
 from views.history_view   import build_history
@@ -18,6 +20,24 @@ def main(page: ft.Page):
     page.window.height     = 760
     page.window.min_width  = 900
     page.window.min_height = 640
+
+    # ── CONTROL DE CICLO DE VIDA DE LA VENTANA ─────────────────
+    page.window.prevent_close = True
+
+    def on_window_event(e):
+        if e.data == "close":
+            page.window.visible = False
+            page.update()
+            print("Cierre de aplicación detectado. Liberando recursos...")
+            try:
+                stop_daemon()
+            except Exception as ex:
+                print(f"[ERROR CLOSING DAEMON] {ex}")
+            finally:
+                page.window.destroy()
+
+    page.window.on_event = on_window_event
+    # ─────────────────────────────────────────────────────────────
 
     init_db()
 
@@ -125,6 +145,7 @@ def main(page: ft.Page):
             def on_done():
                 status_lbl.value = "Listo. Iniciando FacturaExtractor..."
                 page.update()
+                threading.Thread(target=start_daemon, daemon=True).start()
                 time.sleep(1)
                 launch_main_app()
 
@@ -182,6 +203,7 @@ def main(page: ft.Page):
     # ── ARRANQUE ─────────────────────────────────────────────────────
     if model_exists():
         launch_main_app()
+        threading.Thread(target=start_daemon, daemon=True).start()
     else:
         show_download_screen()
 

@@ -1,105 +1,115 @@
 import httpx
 import os
-import threading
+import sys
 import json
 import re
-from pathlib import Path
-
-# ── MODELO ──────────────────────────────────────────────────────────
-MODEL_DIR      = Path(os.environ.get("LOCALAPPDATA", ".")) / "PyBloSoft" / "models"
-MODEL_FILENAME = "Qwen2.5-1.5B-Instruct-Q4_K_M.gguf"
-MODEL_PATH     = MODEL_DIR / MODEL_FILENAME
-MODEL_URL      = "https://huggingface.co/bartowski/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/Qwen2.5-1.5B-Instruct-Q4_K_M.gguf"
-
-def model_exists():
-    return MODEL_PATH.exists() and MODEL_PATH.stat().st_size > 100_000_000
-
-def download_model(on_progress, on_done, on_error):
-    def run():
-        try:
-            MODEL_DIR.mkdir(parents=True, exist_ok=True)
-            tmp_path = MODEL_PATH.with_suffix(".tmp")
-            with httpx.stream("GET", MODEL_URL, follow_redirects=True, timeout=None) as r:
-                r.raise_for_status()
-                total      = int(r.headers.get("content-length", 0))
-                downloaded = 0
-                with open(tmp_path, "wb") as f:
-                    for chunk in r.iter_bytes(chunk_size=1024 * 256):
-                        f.write(chunk)
-                        downloaded += len(chunk)
-                        if total:
-                            pct  = downloaded / total
-                            d_gb = downloaded / 1_073_741_824
-                            t_gb = total      / 1_073_741_824
-                            on_progress(pct, d_gb, t_gb)
-            tmp_path.rename(MODEL_PATH)
-            on_done()
-        except Exception as e:
-            on_error(str(e))
-    threading.Thread(target=run, daemon=True).start()
+import time
+import subprocess
+import psutil
+from modules.config  import MODEL_PATH, PORT
 
 
-# ── INFERENCIA ──────────────────────────────────────────────────────
-_llm            = None
-_gpu_activa     = False
-_physical_cores = max(1, (os.cpu_count() or 4) // 2)
-_logical_cores  = os.cpu_count() or 4
+try:
+    _physical_cores = psutil.cpu_count(logical=False) or psutil.cpu_count() or 4
+    _logical_cores  = psutil.cpu_count(logical=True) or 4
+except ImportError:
+    _logical_cores  = os.cpu_count() or 4
+    _physical_cores = max(1, _logical_cores // 2)
 
+_n_threads_optimized = max(1, _physical_cores)
+_n_threads_batch_optimized = max(1, _logical_cores)
 
-def get_gpu_status():
-    """Retorna True si el modelo se cargó con GPU."""
-    return _gpu_activa
-
-def load_model():
-    global _llm,  _gpu_activa
-    if _llm is not None:
-        return _llm
-    
-    from llama_cpp import Llama
-    
-    # Parámetros base optimizados para RAM ajustada
-    common_params = {
-        "model_path": str(MODEL_PATH),
-        "n_ctx": 2048,
-        "n_batch": 512,
-        "n_ubatch": 256,
-        "n_threads": max(1, _physical_cores - 1), # Evita que la PC se tilde
-        "n_threads_batch": _logical_cores,
-        "use_mmap": True,
-        "use_mlock": False,
-        "verbose": False,
-    }
-    
-    # INTENTO 1: GPU DEDICADA
+def start_daemon():
+    """Inicia el servidor llama_cpp como un proceso silencioso en segundo plano utilizando sus parámetros optimizados."""
     try:
-        _llm        = Llama(**common_params, n_gpu_layers=-1, flash_attn=True)
-        _gpu_activa = True
-        return _llm
-    except Exception:
+        res = httpx.get(f"http://localhost:{PORT}/v1/models")
+        if res.status_code == 200:
+            print("El daemon del servidor ya se está ejecutando en segundo plano..")
+            return
+    except httpx.RequestError:
         pass
 
-    # INTENTO 2: CPU PURO
-    try:
-        _llm        = Llama(**common_params, n_gpu_layers=0, flash_attn=False)
-        _gpu_activa = False
-        return _llm
-    except Exception as e:
-        print(f"Error crítico: No se pudo cargar el modelo ni en CPU. {e}")
-        return None
+    print("Cargando modelo en RAM... (Iniciando sesión de trabajo)")
 
+    cmd = [
+        sys.executable, "-m", "llama_cpp.server",
+        "--model", str(MODEL_PATH),
+        "--port", str(PORT),
+        "--host", "localhost",
+        "--n_ctx", "2048",
+        "--n_batch", "512",
+        "--n_ubatch", "512",
+        "--n_threads", str(_n_threads_optimized),
+        "--n_threads_batch", str(_n_threads_batch_optimized),
+        "--use_mmap", "True",
+        "--cache", "True",
+        "--verbose", "False",
+    ]
+
+    # INDICADOR CRÍTICO DE WINDOWS: CREATE_NO_WINDOW (0x08000000)
+    # Esto le dice a Windows: "Ejecuta esto en segundo plano 100% invisible, 
+    # sin abrir ventanas CMD adicionales, pero manteniendo intacto el entorno virtual pipx".
+    creation_flags = 0x08000000
+
+    # Utiliza close_fds=True para desvincular completamente las descripciones de archivos de la terminal actual.
+    subprocess.Popen(
+        cmd, 
+        stdout=subprocess.DEVNULL, 
+        stderr=subprocess.DEVNULL, 
+        creationflags=creation_flags,
+        close_fds=True
+    )
+
+    server_ready = False
+    for _ in range(30):
+        try:
+            time.sleep(1)
+            if httpx.get(f"http://localhost:{PORT}/v1/models").status_code == 200:
+                server_ready = True
+                break
+        except httpx.RequestError:
+            continue
+            
+    if not server_ready:
+        print("✗ Error: el daemon del servidor tardó demasiado en cargarse en la RAM.")
+        return
+
+    # Se fuerza al mensaje a cargarse al inicio (Precalentamiento)
+    print("Preparando la caché del prompt y optimizando las capas del motor...")
+    try:
+        dummy_text = "--- a/init.txt\n+++ b/init.txt\n@@ -0,0 +1 @@\n+init"
+        
+        # La función original se ejecuta en segundo plano. 
+        # Esto tardará unos segundos en cargarse aquí, absorbiendo toda la espera inicial.
+        extract_invoice_data(dummy_text)
+        
+        print("✓ Sesión de trabajo inicializada. ¡El modelo está cargado y listo en segundo plano!")
+    except Exception:
+        # Si por alguna razón falla el calentamiento, no cancela el inicio del servidor.
+        print("✓ Sesión de trabajo inicializada. El modelo se está ejecutando (se omitió la preparación de caché).")
+
+def stop_daemon():
+    """Encuentra el proceso del servidor en segundo plano y lo finaliza para liberar memoria."""
+    try:
+        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+            if proc.info['cmdline'] and "llama_cpp.server" in " ".join(proc.info['cmdline']):
+                proc.terminate()
+                print("✓ La sesión se cerró con éxito. RAM liberada.")
+                return
+        print("ℹ No active session was found running.")
+    except ImportError:
+        print("✗ Se requiere la biblioteca 'psutil' para finalizar la sesión. Instálelo con: pip install psutil")
 
 def extract_invoice_data(text):
     """
-    Analiza el texto de la factura forzando un formato JSON válido
-    mediante el uso de LlamaGrammar nativo.
+    Versión hiper-optimizada con poda de contexto y alineación estricta de caché.
     """
-
-    from llama_cpp.llama_grammar import LlamaGrammar
 
     prompt = (
             f"<|im_start|>system\n"
-            f"Sos un asistente experto en análisis de facturas. "
+            f"Sos un asistente experto en análisis de facturas argentinas.\n"
             f"Extraé los datos y respondé ÚNICAMENTE con un objeto JSON válido.\n"
+            f"El texto puede tener palabras pegadas sin espacios o líneas de caracteres aleatorios (códigos QR, hashes). Ignoralos.\n"
             f"<|im_end|>\n"
             f"<|im_start|>user\n"
             f"Extraé estos datos de la factura:\n"
@@ -112,42 +122,45 @@ def extract_invoice_data(text):
             f"<|im_start|>assistant\n"
         )
 
-    llm = load_model()
-    grammar_object = LlamaGrammar.from_string(r"""
-        root   ::= object
-        value  ::= object | array | string | number | boolean | null
-        object ::= "{" ws (string ":" ws value ("," ws string ":" ws value)*)? ws "}"
-        array  ::= "[" ws (value ("," ws value)*)? ws "]"
-        string ::= "\"" ([^\\"\x7F\x00-\x1F] | "\\" (["\\/bfnrt] | "u" [0-9a-fA-F]{4}))* "\""
-        number ::= "-"? ([0-9] | [1-9] [0-9]*) ("." [0-9]+)? ([eE] [-+]? [0-9]+)?
-        boolean ::= "true" | "false"
-        null    ::= "null"
-        ws     ::= [ \t\n]*
-        """)
-    output = llm(
-        prompt,
-        max_tokens=200,    # Suficiente para un JSON corto
-        temperature=0.0,
-        repeat_penalty=1.1,
-        top_p=1.0,
-        stop=["<|im_end|>", "###"],
-        echo=False,
-        grammar=grammar_object
-    )
+    payload = {
+        "prompt": prompt,
+        "temperature": 0.0,
+        "max_tokens": 100,
+        "repeat_penalty": 1.1,
+        "cache_prompt": True,
+        "echo": False,
+        "stop": ["<|im_end|>", "###"]
+    }
 
-    raw = output["choices"][0]["text"].strip()
-    
-    # Limpieza de caracteres de control invisibles
-    raw = re.sub(r'[\x00-\x1F\x7F]', '', raw)
-
+    json_message = ""
     try:
-        data = json.loads(raw)
+        response = httpx.post(f"http://localhost:{PORT}/v1/completions", json=payload, timeout=30.0)
+        response.raise_for_status()
+
+        json_message = response.json()["choices"][0]["text"].strip()
+
+        # 1. Filtros de Markdown
+        if "```json" in json_message:
+            json_message = json_message.split("```json")[1].split("```")[0].strip()
+        elif "```" in json_message:
+            json_message = json_message.split("```")[1].split("```")[0].strip()
+
+        # 2. Limpieza de comentarios y caracteres invisibles
+        json_message = re.sub(r'//.*$', '', json_message, flags=re.M)
+        json_message = re.sub(r'[\x00-\x1F\x7F]', '', json_message)
+
+        # 3. SEGURIDAD ADICIONAL: Extracción de JSON puro (Por si el modelo habla de más)
+        match = re.search(r'\{.*\}', json_message, re.DOTALL)
+        json_clean = match.group(0) if match else json_message
+
+        # 4. Parseo final
+        data = json.loads(json_clean.strip())
         if "moneda" in data:
             data["moneda"] = str(data["moneda"]).upper()
         return data
+
     except Exception as e:
-        print(f"[LLM ERROR] JSON inválido: {e}. Raw output: {raw}")
-        # Fallback seguro pero con strings vacíos y monto 0.0 para cuidar la DB
+        print(f"[LLM ERROR] Falló la extracción veloz: {e}. Raw: '{json_clean}'")
         return {
             "proveedor": "Desconocido",
             "fecha": "",
