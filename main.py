@@ -1,4 +1,6 @@
 import flet as ft
+import ctypes
+import sys
 import os
 import logging
 from logging.handlers import RotatingFileHandler
@@ -14,7 +16,23 @@ from views.extractor_view import build_extractor
 from views.history_view   import build_history
 from views.settings_view  import build_settings
 from views.charts_view    import build_charts
+from config.config_app    import myappid, APP_TITLE 
 
+
+# Establece una identidad única para el proceso en Windows (AppUserModelID)
+# Esto asegura que el icono se agrupe correctamente en la barra de tareas y permita anclar la app
+try:
+    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+except Exception:
+    pass
+
+# --- CÁLCULO DE RUTA ABSOLUTA ---
+if getattr(sys, 'frozen', False):
+    base_path = os.path.dirname(sys.executable)
+else:
+    base_path = os.path.dirname(__file__)
+
+ASSETS_PATH = os.path.join(base_path, "assets")
 
 # Carpeta de la App donde se va a guardar el archivo de log
 BASE_DIR = Path(os.environ.get("LOCALAPPDATA")) / "FacturaExtractor"
@@ -36,13 +54,13 @@ handler = RotatingFileHandler(
 
 # Configuración del logging
 logging.basicConfig(
-    level=logging.WARNING,
+    level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[handler]
 )
 
 def main(page: ft.Page):
-    page.title             = "FacturaExtractor - Gestión de Facturas con IA"
+    page.title             = APP_TITLE
     page.bgcolor           = BG
     page.theme_mode        = ft.ThemeMode.LIGHT
     page.window.maximized  = True
