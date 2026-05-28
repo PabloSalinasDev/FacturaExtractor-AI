@@ -9,79 +9,55 @@ def _get_ocr_reader():
     global _easyocr_reader
     if _easyocr_reader is None:
         import easyocr
-        _easyocr_reader = easyocr.Reader(["es", "en"], gpu=True, verbose=False)
+        _easyocr_reader = easyocr.Reader(["es", "en"], gpu=False, verbose=False)
     return _easyocr_reader
 
 
 def clean_text(text):
-    """Limpia el texto extraído de PDFs: elimina símbolos raros y saltos innecesarios."""
+    """Limpia el texto extraído de PDFs: elimina caracteres de control y normaliza espacios."""
+    # Elimina caracteres de control invisibles
     text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]', ' ', text)
+    # Elimina líneas que son solo números de página
     text = re.sub(r'^\s*\d{1,3}\s*$', '', text, flags=re.MULTILINE)
-    text = re.sub(r'([a-záéíóúüñ]) ([A-ZÁÉÍÓÚÜÑ][a-záéíóúüñ]{3,} [a-záéíóúüñ])', r'\1\n\n\2', text)
-
-    def _es_linea_tabla(linea):
-        linea = linea.strip()
-        if len(linea) < 10 or len(linea) > 300:
-            return False
-        if not re.search(r'[.,;:?!()]', linea):
-            palabras = linea.split()
-            caps = sum(1 for p in palabras if p and p[0].isupper())
-            if len(palabras) >= 4 and caps / len(palabras) > 0.5:
-                return True
-        return False
-
-    lineas_filtradas = []
-    for linea in text.splitlines():
-        if not _es_linea_tabla(linea):
-            lineas_filtradas.append(linea)
-    text = '\n'.join(lineas_filtradas)
-
-    text = re.sub(r'(?<=[a-záéíóúüñA-ZÁÉÍÓÚÜÑ,;:])\n(?=[a-záéíóúüñ])', ' ', text)
-    text = re.sub(r'-\n([a-záéíóúüñ])', r'\1', text)
+    # Reemplaza viñetas por guión estándar
     text = re.sub(r'[●○•◆▪]\s*', '- ', text)
+    # Colapsa espacios múltiples
     text = re.sub(r' {2,}', ' ', text)
+    # Colapsa saltos de línea excesivos
     text = re.sub(r'\n{3,}', '\n\n', text)
-
+    # Limpia espacios al inicio/fin de cada línea
+    text = '\n'.join(line.strip() for line in text.splitlines())
+    # Elimina líneas de ruido: QR, hashes, strings aleatorios
+    # Criterio: línea larga, pocas palabras, menos del 50% letras reales
     lineas = text.splitlines()
-    resultado = []
-    for linea in lineas:
-        linea = linea.strip()
-        if not linea:
-            resultado.append('')
-        elif resultado and resultado[-1] and len(resultado[-1]) < 120:
-            resultado[-1] += ' ' + linea
-        else:
-            resultado.append(linea)
-    text = '\n'.join(resultado)
-    text = re.sub(r'\n{3,}', '\n\n', text)
+    lineas = [
+        l for l in lineas
+        if not (len(l) > 40 and re.search(r'[;]{1}|[:]{1}.*[;]', l) and len(l.split()) <= 3)
+    ]
+    lineas = [
+        l for l in lineas
+        if not re.search(r'[A-Z][a-z][A-Z]|[a-z][A-Z][a-z0-9]|[0-9][A-Za-z]{2,}[0-9]', l) 
+        or ' ' in l
+    ]
+    lineas = [
+        l for l in lineas
+        if not re.fullmatch(r'\d+', l.strip())
+    ]
+    text = '\n'.join(lineas)
 
     return text.strip()
 
 
 def extract_text_from_pdf(path):
+    """Extrae el texto digital nativo TOTAL de la primera página sin recortar."""
     try:
         from pdf_oxide import PdfDocument
         doc = PdfDocument(path)
         
-        # 1. Extraemos SOLO la página 1 (índice 0)
         texto_pagina = doc.extract_text(0) or ""
         
-        # 2. Limpieza rápida de líneas vacías
-        lineas = [l.strip() for l in texto_pagina.splitlines() if l.strip()]
-        
-        # 3. EL RECORTE "MATA-TIEMPOS":
-        # En Edenor y Musimundo, todo lo que buscás está al principio.
-        # Al darle solo 25 líneas, eliminamos:
-        # - En Edenor: Todo el detalle de subsidios y cuadros tarifarios.
-        # - En Musimundo: Todo el detalle de productos.
-        if len(lineas) > 25:
-            # Tomamos 25 líneas del principio y 5 del final (por si el CAE está ahí)
-            cleaned = "\n".join(lineas[:25]) + "\n" + "\n".join(lineas[-5:])
-        else:
-            cleaned = "\n".join(lineas)
-
-        es_escaneado = len(cleaned) < 50
-        return cleaned, es_escaneado
+        es_escaneado = len(texto_pagina.strip()) < 50
+        return texto_pagina, es_escaneado
 
     except ImportError:
         raise RuntimeError("pdf_oxide no está instalado.")
@@ -101,7 +77,7 @@ def extract_text_from_scanned_pdf(path):
 
         for i in range(len(pdf)):
             page   = pdf[i]
-            image  = page.render(scale=2).to_pil()  # scale=2 para mejor calidad OCR
+            image  = page.render(scale=1.5).to_pil()  # scale=1.5 para mejor calidad OCR
             img_np = np.array(image)
             resultados = reader.readtext(img_np, detail=0, paragraph=True)
             textos.append("\n".join(resultados))
@@ -117,14 +93,30 @@ def extract_text_from_scanned_pdf(path):
 
 def extract_text(path):
     """
-    Detecta tipo y extrae texto.
-    Retorna (texto, es_escaneado).
+    Orquestador principal con el RECORTE INTELIGENTE POS-ENSAMBLADO.
     """
     p = Path(path)
-    if p.suffix.lower() == ".pdf":
-        text, es_escaneado = extract_text_from_pdf(path)
-        if es_escaneado:
-            text = extract_text_from_scanned_pdf(path)
-        return text, es_escaneado
-    else:
+    if p.suffix.lower() != ".pdf":
         raise ValueError(f"Formato no soportado: {p.suffix}")
+
+    # 1. Extracción cruda (Nativa o por OCR)
+    text, es_escaneado = extract_text_from_pdf(path)
+    
+    if es_escaneado:
+        print("[READER] PDF detectado como escaneado. Iniciando EasyOCR optimizado...")
+        text = extract_text_from_scanned_pdf(path)
+
+    # 2. ENSAMBLAJE Y LIMPIEZA
+
+    text_limpio = clean_text(text)
+
+    # 3. RECORTE: solo en facturas muy extensas para evitar ruido innecesario.
+    lineas = text_limpio.splitlines()
+
+    if len(lineas) > 30:
+        # 15 líneas del principio (encabezado + detalle) + 15 del final (totales)
+        text_final = "\n".join(lineas[:15]) + "\n" + "\n".join(lineas[-15:])
+    else:
+        text_final = "\n".join(lineas)
+
+    return text_final, es_escaneado
