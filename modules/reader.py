@@ -1,5 +1,8 @@
+import flet as ft
 import re
-from pathlib import Path
+from pathlib         import Path
+
+from views.helpers   import show_snack, ERROR
 
 _easyocr_reader = None
 
@@ -48,7 +51,7 @@ def clean_text(text):
     return text.strip()
 
 
-def extract_text_from_pdf(path):
+def extract_text_from_pdf(path, page=ft.Page):
     """Extrae el texto digital nativo TOTAL de la primera página sin recortar."""
     try:
         from pdf_oxide import PdfDocument
@@ -59,13 +62,11 @@ def extract_text_from_pdf(path):
         es_escaneado = len(texto_pagina.strip()) < 50
         return texto_pagina, es_escaneado
 
-    except ImportError:
-        raise RuntimeError("pdf_oxide no está instalado.")
     except Exception as e:
-        raise RuntimeError(f"Error leyendo PDF: {e}")
+        show_snack(page, "Error leyendo PDF", ERROR)
+        raise RuntimeError(f"Error leyendo PDF: {e}") from e
 
-
-def extract_text_from_scanned_pdf(path):
+def extract_text_from_scanned_pdf(path, page=ft.Page):
     """OCR con EasyOCR para PDFs escaneados usando pypdfium2."""
     try:
         import pypdfium2 as pdfium
@@ -75,8 +76,7 @@ def extract_text_from_scanned_pdf(path):
         pdf     = pdfium.PdfDocument(path)
         textos  = []
 
-        for i in range(len(pdf)):
-            page   = pdf[i]
+        for page in pdf:
             image  = page.render(scale=1.5).to_pil()  # scale=1.5 para mejor calidad OCR
             img_np = np.array(image)
             resultados = reader.readtext(img_np, detail=0, paragraph=True)
@@ -86,24 +86,25 @@ def extract_text_from_scanned_pdf(path):
         return clean_text("\n".join(textos))
 
     except ImportError as e:
-        raise RuntimeError(f"Dependencia faltante para OCR: {e}")
+        raise RuntimeError(f"Dependencia faltante para OCR: {e}") from e
     except Exception as e:
-        raise RuntimeError(f"Error en OCR: {e}")
+        show_snack(page, "Error leyendo PDF", ERROR)
+        raise RuntimeError(f"Error en OCR: {e}") from e
 
 
-def extract_text(path):
+def extract_text(path, page=ft.Page):
     """
     Orquestador principal con el RECORTE INTELIGENTE POS-ENSAMBLADO.
     """
     p = Path(path)
     if p.suffix.lower() != ".pdf":
+        show_snack(page, "Formato no soportado", ERROR)
         raise ValueError(f"Formato no soportado: {p.suffix}")
 
     # 1. Extracción cruda (Nativa o por OCR)
     text, es_escaneado = extract_text_from_pdf(path)
     
     if es_escaneado:
-        print("[READER] PDF detectado como escaneado. Iniciando EasyOCR optimizado...")
         text = extract_text_from_scanned_pdf(path)
 
     # 2. ENSAMBLAJE Y LIMPIEZA

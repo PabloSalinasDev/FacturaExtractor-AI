@@ -12,17 +12,10 @@ from datetime import datetime
 from db.crud import get_all_facturas
 from modules.csv_exporter import export_reporte_csv
 from views.helpers import (
-    card, section_title,
-    ACCENT, PRIMARY, TEXT_GRAY, show_snack, PENDING,
-    btn_outline,
+    card, section_title, 
+    show_snack, btn_outline, PENDING, ACCENT, PRIMARY, TEXT_GRAY, 
+    BAR_COLOR, BAR_EDGE, GRID_COLOR, LABEL_COLOR, TITLE_COLOR
 )
-
-# ── COLORES MATPLOTLIB ──────────────────────────
-BAR_COLOR    = "#2ecc71"
-BAR_EDGE     = "#27ae60"
-GRID_COLOR   = "#eeeeee"
-LABEL_COLOR  = "#6c757d"
-TITLE_COLOR  = "#1a1a2e"
 
 
 def _fig_to_base64(fig):
@@ -278,7 +271,7 @@ def build_charts(page):
             ft.Text("Seleccioná el período y divisa", size=14,
                     weight=ft.FontWeight.BOLD, color=ACCENT),
             ft.Divider(height=1, color="#f0f0f0"),
-            ft.Row([btn_dia, btn_mes, btn_anio, dd_moneda, btn_export], spacing=12),
+            ft.Row([dd_moneda, btn_dia, btn_mes, btn_anio, btn_export], spacing=12),
         ], spacing=8)),
         chart_container,
         no_data_container,

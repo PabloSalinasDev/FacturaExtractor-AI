@@ -1,3 +1,4 @@
+import flet as ft
 import httpx
 import os
 import sys
@@ -5,31 +6,33 @@ import json
 import re
 import time
 import subprocess
-import psutil
-from modules.config  import MODEL_PATH, PORT
 
-
+# Bandera global para saber si contamos con psutil de manera segura
 try:
+    import psutil
+    _HAS_PSUTIL = True
     _physical_cores = psutil.cpu_count(logical=False) or psutil.cpu_count() or 4
     _logical_cores  = psutil.cpu_count(logical=True) or 4
 except ImportError:
+    _HAS_PSUTIL = False
     _logical_cores  = os.cpu_count() or 4
     _physical_cores = max(1, _logical_cores // 2)
 
 _n_threads_optimized = max(1, _physical_cores)
 _n_threads_batch_optimized = max(1, _logical_cores)
 
-def start_daemon():
+from modules.config  import MODEL_PATH, PORT
+from views.helpers   import show_snack, ERROR
+
+
+def start_daemon(page: ft.Page):
     """Inicia el servidor llama_cpp como un proceso silencioso en segundo plano utilizando sus parámetros optimizados."""
     try:
         res = httpx.get(f"http://localhost:{PORT}/v1/models")
         if res.status_code == 200:
-            print("El daemon del servidor ya se está ejecutando en segundo plano..")
             return
     except httpx.RequestError:
         pass
-
-    print("Cargando modelo en RAM... (Iniciando sesión de trabajo)")
 
     cmd = [
         sys.executable, "-m", "llama_cpp.server",
@@ -75,30 +78,33 @@ def start_daemon():
         return
 
     # Se fuerza al mensaje a cargarse al inicio (Precalentamiento)
-    print("Preparando la caché del prompt y optimizando las capas del motor...")
     try:
         dummy_text = "--- a/init.txt\n+++ b/init.txt\n@@ -0,0 +1 @@\n+init"
         
-        # La función original se ejecuta en segundo plano. 
-        # Esto tardará unos segundos en cargarse aquí, absorbiendo toda la espera inicial.
+        # CORRECCIÓN: Se remueve el argumento 'page' que no pertenece a la firma de la función
         extract_invoice_data(dummy_text)
-        
-        print("✓ Sesión de trabajo inicializada. ¡El modelo está cargado y listo en segundo plano!")
+
+        show_snack(page, "¡El modelo está cargado y listo en segundo plano!")
     except Exception:
         # Si por alguna razón falla el calentamiento, no cancela el inicio del servidor.
-        print("✓ Sesión de trabajo inicializada. El modelo se está ejecutando (se omitió la preparación de caché).")
+        show_snack(page, "¡El modelo está cargado y listo en segundo plano! (se omitió la preparación de caché)")
 
 def stop_daemon():
     """Encuentra el proceso del servidor en segundo plano y lo finaliza para liberar memoria."""
+    # CORRECCIÓN: Usamos la bandera global para verificar si psutil está disponible
+    if not _HAS_PSUTIL:
+        print("Error al cerrar la sesión. La librería 'psutil' no está disponible.")
+        return
+
     try:
         for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
             if proc.info['cmdline'] and "llama_cpp.server" in " ".join(proc.info['cmdline']):
                 proc.terminate()
                 print("✓ La sesión se cerró con éxito. RAM liberada.")
                 return
-        print("ℹ No active session was found running.")
-    except ImportError:
-        print("✗ Se requiere la biblioteca 'psutil' para finalizar la sesión. Instálelo con: pip install psutil")
+    except Exception as e:
+        print(f"[PROCESS ERROR] No se pudo terminar el daemon: {e}")
+
 
 def extract_invoice_data(text):
     """
@@ -132,7 +138,10 @@ def extract_invoice_data(text):
         "stop": ["<|im_end|>", "###"]
     }
 
+    # CORRECCIÓN: Inicializamos las variables de texto vacías arriba para evitar UnboundLocalError en el except
     json_message = ""
+    json_clean = ""
+    
     try:
         response = httpx.post(f"http://localhost:{PORT}/v1/completions", json=payload, timeout=30.0)
         response.raise_for_status()

@@ -145,7 +145,7 @@ def main(page: ft.Page):
             def on_done():
                 status_lbl.value = "Listo. Iniciando FacturaExtractor..."
                 page.update()
-                threading.Thread(target=start_daemon, daemon=True).start()
+                threading.Thread(target=start_daemon(page), daemon=True).start()
                 time.sleep(1)
                 launch_main_app()
 
@@ -203,7 +203,7 @@ def main(page: ft.Page):
     # ── ARRANQUE ─────────────────────────────────────────────────────
     if model_exists():
         launch_main_app()
-        threading.Thread(target=start_daemon, daemon=True).start()
+        threading.Thread(target=start_daemon(page), daemon=True).start()
     else:
         show_download_screen()
 

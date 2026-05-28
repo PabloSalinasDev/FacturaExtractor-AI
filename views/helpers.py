@@ -1,14 +1,21 @@
 import flet as ft
 
 # ── COLORES ──────────────────────────────────────────────────────────
-PRIMARY   = "#1e3a5f"
-ACCENT    = "#2ecc71"
-BG        = "#f4f6f9"
-CARD_BG   = "#ffffff"
-TEXT_DARK = "#1a1a2e"
-TEXT_GRAY = "#6c757d"
-PENDING   = "#f39c12"
-PAID      = "#27ae60"
+PRIMARY      = "#1e3a5f"
+ACCENT       = "#2ecc71"
+BG           = "#f4f6f9"
+CARD_BG      = "#ffffff"
+TEXT_DARK    = "#1a1a2e"
+TEXT_GRAY    = "#6c757d"
+PENDING      = "#f39c12"
+PAID         = "#27ae60"
+ERROR        = "#dc3545"
+BAR_COLOR    = "#2ecc71"
+BAR_EDGE     = "#27ae60"
+GRID_COLOR   = "#eeeeee"
+LABEL_COLOR  = "#6c757d"
+TITLE_COLOR  = "#1a1a2e"
+
 
 STATUS_COLORS = {"pendiente": PENDING, "pagado": PAID}
 STATUS_LABELS = {"pendiente": "Pendiente", "pagado": "Pagado"}

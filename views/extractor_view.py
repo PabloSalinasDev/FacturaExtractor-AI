@@ -9,7 +9,7 @@ from modules.file_manager import save_pdf
 from modules.llm_client   import extract_invoice_data
 from views.helpers        import (
     card, section_title, lbl, tf, btn_primary, btn_outline,
-    show_snack, ACCENT, PRIMARY, TEXT_DARK, TEXT_GRAY, MONEDAS,
+    show_snack, ACCENT, PRIMARY, TEXT_DARK, TEXT_GRAY, MONEDAS, ERROR
 )
 
 def build_extractor(page: ft.Page):
@@ -181,7 +181,7 @@ def build_extractor(page: ft.Page):
                 btn_analizar.disabled  = False
                 state["extracting"]    = False
                 page.update()
-                show_snack(page, f"Error: {ex}", "#dc3545")
+                show_snack(page, f"Error: {ex}", ERROR)
 
         threading.Thread(target=run, daemon=True).start()
 
@@ -195,11 +195,11 @@ def build_extractor(page: ft.Page):
         try:
             monto = float(tf_monto.value.strip().replace(",", "."))
         except ValueError:
-            show_snack(page, "El monto debe ser un número válido.", "#dc3545")
+            show_snack(page, "El monto debe ser un número válido.", ERROR)
             return
 
         if not proveedor or not fecha:
-            show_snack(page, "Proveedor y fecha son obligatorios.", "#dc3545")
+            show_snack(page, "Proveedor y fecha son obligatorios.", ERROR)
             return
 
         archivo_guardado = None
@@ -210,7 +210,7 @@ def build_extractor(page: ft.Page):
                     state["pdf_path"], proveedor, fecha, monto, moneda, carpeta
                 )
             except Exception as ex:
-                show_snack(page, f"No se pudo copiar el PDF: {ex} | path: {state['pdf_path']}", "#dc3545")
+                show_snack(page, f"No se pudo copiar el PDF: {ex} | path: {state['pdf_path']}", ERROR)
 
         save_factura(proveedor, fecha, monto, moneda, state["fuente"], archivo_guardado)
         show_snack(page, "Factura guardada correctamente")
