@@ -1,13 +1,13 @@
-# FacturaExtractor IA
+# FacturaExtractor AI
 
 Aplicación de escritorio para Windows que extrae automáticamente los datos de facturas en PDF usando un modelo de IA local. Sin API keys, sin internet, sin que tus datos salgan de tu máquina.
 
 <p align="center">
-  <a href="https://github.com/PabloSalinasDev/FacturaExtractor/releases">
+  <a href="https://github.com/PabloSalinasDev/FacturaExtractor-AI/releases">
     <img src="https://img.shields.io/badge/Descargar-Instalador_Windows-blue?style=for-the-badge&logo=windows" alt="Descargar Instalador">
   </a>
   &nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="https://github.com/PabloSalinasDev/FacturaExtractor/issues">
+  <a href="https://github.com/PabloSalinasDev/FacturaExtractor-AI/issues">
     <img src="https://img.shields.io/badge/Reportar-Error-red?style=for-the-badge&logo=github" alt="Reportar Error">
   </a>
 </p>
@@ -31,11 +31,13 @@ Aplicación de escritorio para Windows que extrae automáticamente los datos de 
 ## Cómo funciona
 
 1. Al abrir la app, el modelo de IA se carga en RAM en segundo plano.
-2. Arrastrás o seleccionás un PDF de factura.
+2. Seleccionás un PDF de factura.
 3. La app extrae el texto del PDF (nativo o via OCR si está escaneado).
 4. El modelo extrae: **proveedor**, **fecha**, **monto** y **moneda**.
 5. Confirmás o editás los datos extraídos.
 6. La factura se guarda renombrada automáticamente con el formato `Proveedor_DD-MM-YYYY_MONEDAmonto.pdf`.
+7. La app tiene un apartado donde se puede pegar el texto de una factura o escribir manualmente los gastos para que tambien quede guardado en el historial.
+8. En el historial aparte de ver los datos extraídos, se puede marcar como pendiente o pagado.
 
 ---
 
