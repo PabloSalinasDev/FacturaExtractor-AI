@@ -2,7 +2,7 @@ import sqlite3
 import os
 from pathlib import Path
 
-DB_DIR  = Path(os.environ.get("LOCALAPPDATA", ".")) / "PyBloSoft"
+DB_DIR  = Path(os.environ.get("LOCALAPPDATA", ".")) / "FacturaExtractor"
 DB_PATH = DB_DIR / "facturas.db"
 
 

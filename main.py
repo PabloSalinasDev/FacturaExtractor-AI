@@ -61,6 +61,7 @@ logging.basicConfig(
 
 def main(page: ft.Page):
     page.title             = APP_TITLE
+    page.window.icon       = os.path.join(ASSETS_PATH, "icon.ico")
     page.bgcolor           = BG
     page.theme_mode        = ft.ThemeMode.LIGHT
     page.window.maximized  = True
@@ -76,11 +77,10 @@ def main(page: ft.Page):
         if e.data == "close":
             page.window.visible = False
             page.update()
-            print("Cierre de aplicación detectado. Liberando recursos...")
             try:
                 stop_daemon()
             except Exception as ex:
-                print(f"[ERROR CLOSING DAEMON] {ex}")
+                logging.warning("[ERROR CLOSING DAEMON] %s", ex)
             finally:
                 page.window.destroy()
 

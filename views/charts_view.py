@@ -52,7 +52,7 @@ def _build_chart_image(labels, values, title, xlabel, moneda):
                 linewidth=0.6, width=0.55, zorder=3)
     
     if len(labels) == 1:
-            ax.set_xlim(-1, 1)
+        ax.set_xlim(-1, 1)
 
     # Valor encima de cada barra
     for bar in bars:
@@ -123,7 +123,7 @@ def _chart_por_dia(data, moneda):
     labels = [f"{d:02d}-{m:02d}-{y}" for y, m, d in keys_sorted]
     values = [totales[k] for k in keys_sorted]
     
-    return _build_chart_image(labels, values, f"Gastos por Día (Últimos 30 días con actividad)", "Fecha", moneda)
+    return _build_chart_image(labels, values, "Gastos por Día (Últimos 30 días con actividad)", "Fecha", moneda)
 
 
 def _chart_por_mes(data, moneda):
