@@ -94,17 +94,16 @@ def stop_daemon():
     """Encuentra el proceso del servidor en segundo plano y lo finaliza para liberar memoria."""
     # CORRECCIÓN: Usamos la bandera global para verificar si psutil está disponible
     if not _HAS_PSUTIL:
-        logging.warning("Error al cerrar la sesión. La librería 'psutil' no está disponible.")
+        logging.error("Error al cerrar la sesión. La librería 'psutil' no está disponible.")
         return
 
     try:
         for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
             if proc.info['cmdline'] and "llama_cpp.server" in " ".join(proc.info['cmdline']):
                 proc.terminate()
-                logging.info("✓ La sesión se cerró con éxito. RAM liberada.")
                 return
     except Exception as e:
-        logging.warning("[PROCESS ERROR] No se pudo terminar el daemon: %s", e)
+        logging.error("[PROCESS ERROR] No se pudo terminar el daemon: %s", e)
 
 
 def extract_invoice_data(text):

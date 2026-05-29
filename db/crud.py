@@ -30,7 +30,7 @@ def normalizar_fecha(fecha_str):
         except ValueError:
             continue
             
-    # Si los formatos numéricos estándar fallan, podemos intentar un regex rápido
+    # Si los formatos numéricos estándar fallan, se puede intentar un regex rápido
     # para capturar si envió algo intermedio o con años de 2 dígitos (ej: 20-05-26)
     try:
         # Intento de parsear año de 2 dígitos DD-MM-YY o DD/MM/YY

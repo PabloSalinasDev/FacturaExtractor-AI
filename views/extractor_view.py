@@ -183,7 +183,7 @@ def build_extractor(page: ft.Page):
                 state["extracting"]    = False
                 page.update()
                 show_snack(page, f"Error: {ex}", ERROR)
-                logging.warning("Error: %s", ex)
+                logging.error("Error: %s", ex)
 
 
         threading.Thread(target=run, daemon=True).start()

@@ -65,7 +65,7 @@ def extract_text_from_pdf(path, page=ft.Page):
 
     except Exception as e:
         show_snack(page, "Error leyendo PDF", ERROR)
-        logging.warning("Error leyendo PDF: %s", e)
+        logging.error("Error leyendo PDF: %s", e)
         raise RuntimeError(f"Error leyendo PDF: {e}") from e
 
 def extract_text_from_scanned_pdf(path, page=ft.Page):
@@ -93,7 +93,7 @@ def extract_text_from_scanned_pdf(path, page=ft.Page):
         raise RuntimeError(f"Dependencia faltante para OCR: {e}") from e
     except Exception as e:
         show_snack(page, "Error leyendo PDF", ERROR)
-        logging.warning("Error en OCR: %s", e)
+        logging.error("Error en OCR: %s", e)
         raise RuntimeError(f"Error en OCR: {e}") from e
 
 
