@@ -193,9 +193,9 @@ def main(page: ft.Page):
             def on_done():
                 status_lbl.value = "Listo. Iniciando FacturaExtractor..."
                 page.update()
-                threading.Thread(target=start_daemon(page), daemon=True).start()
                 time.sleep(1)
                 launch_main_app()
+                threading.Thread(target=start_daemon(page), daemon=True).start()
 
             def on_error(msg):
                 status_lbl.value         = f"Error: {msg}"
@@ -222,8 +222,7 @@ def main(page: ft.Page):
                         ft.Text("Configuración inicial", size=15,
                                 weight=ft.FontWeight.BOLD, color=TEXT_DARK),
                         ft.Text(
-                            "El tiempo de extracción depende del hardware de tu equipo.\n"
-                            "Con GPU dedicada: ~8 segundos. Solo CPU: ~40 segundos.",
+                            "El tiempo de extracción depende del hardware de tu equipo.",
                             size=11, color=TEXT_GRAY, text_align=ft.TextAlign.CENTER,
                         ),
                         ft.Text(
