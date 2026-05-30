@@ -81,7 +81,7 @@ FacturaExtractor/
 
 ---
 
-## Instalación
+## Instalación (Modo Desarrollo - Solo CPU)
 
 Primero instalá pipx si no lo tenés:
 
@@ -96,6 +96,15 @@ Luego instalá la app:
 
 ```bash
 python -m pipx install --pip-args="--prefer-binary" .\
+```
+
+Para asegurar que la IA compile y se ejecute exclusivamente en la CPU, abre tu terminal en la raíz del proyecto y ejecuta este comando:
+
+#### En Windows (PowerShell) - *Recomendado para VS Code*
+
+```bash
+$env:CMAKE_ARGS="-DLLAMA_BLAS=ON -DLLAMA_BLAS_VENDOR=OpenBLAS"
+pip install -e .
 ```
 
 > La primera vez que abras la app descargará el modelo de IA (~0.92 GB). Esto ocurre una sola vez. El modelo se guarda en `%LOCALAPPDATA%\FacturaExtractor\models`.
