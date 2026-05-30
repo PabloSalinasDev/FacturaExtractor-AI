@@ -6,17 +6,28 @@ build-backend = "setuptools.build_meta"
 name = "factura-extractor"
 version = "1.0.0"
 description = "Extractor de facturas con IA local"
-requires-python = ">=3.9"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+license-files = ["LICENSE"]
 dependencies = [
     "flet==0.28.3",
-    "llama-cpp-python[server]>=0.3.23",
-    "httpx",
-    "pdf_oxide",
-    "pypdfium2",
-    "easyocr",
-    "pillow",
-    "matplotlib",
-    "psutil",
+    "llama-cpp-python[server]==0.3.23",
+    "httpx==0.28.1",
+    "pdf_oxide==0.3.46",
+    "pypdfium2==5.8.0",
+    "easyocr==1.7.2",
+    "pillow==12.2.0",
+    "matplotlib==3.10.9",
+    "psutil==7.2.2",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
 ]
 
 [tool.setuptools.packages.find]
