@@ -83,26 +83,18 @@ FacturaExtractor/
 
 ## Instalación (Modo Desarrollo - Solo CPU)
 
-Primero instalá pipx si no lo tenés:
-
 ```bash
-pip install pipx
-python -m pipx ensurepath
+# 1. Crear entorno virtual
+python -m venv .venv
+.venv\Scripts\activate
 ```
 
-> Después de `ensurepath`, reiniciá la terminal.
-
-Luego instalá la app:
-
-```bash
-python -m pipx install --pip-args="--prefer-binary" .\
-```
-
-Para asegurar que la IA compile y se ejecute exclusivamente en la CPU, abre tu terminal en la raíz del proyecto y ejecuta este comando:
+Para asegurar que la IA compile y se ejecute exclusivamente en la CPU, en la raíz del proyecto ejecuta este comando:
 
 #### En Windows (PowerShell) - *Recomendado para VS Code*
 
 ```bash
+# 2. Instalar dependencias
 $env:CMAKE_ARGS="-DLLAMA_BLAS=ON -DLLAMA_BLAS_VENDOR=OpenBLAS"
 pip install -e .
 ```
