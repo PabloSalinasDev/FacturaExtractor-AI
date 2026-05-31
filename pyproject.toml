@@ -8,7 +8,7 @@ version = "1.0.0"
 description = "Extractor de facturas con IA local"
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
     "flet==0.28.3",

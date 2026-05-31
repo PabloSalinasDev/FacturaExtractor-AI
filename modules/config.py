@@ -25,7 +25,7 @@ def download_model(on_progress, on_done, on_error):
                 downloaded = 0
 
                 with open(tmp_path, "wb") as f:
-                    for chunk in r.iter_bytes(chunk_size=1024 * 256):
+                    for chunk in r.iter_bytes(chunk_size=1024 * 64):
                         f.write(chunk)
                         downloaded += len(chunk)
                         if total:

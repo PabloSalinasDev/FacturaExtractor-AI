@@ -70,6 +70,8 @@ def main(page: ft.Page):
     page.window.min_width  = 900
     page.window.min_height = 640
 
+    init_db()
+
     # ── CONTROL DE CICLO DE VIDA DE LA VENTANA ─────────────────
     page.window.prevent_close = True
 
@@ -86,8 +88,6 @@ def main(page: ft.Page):
 
     page.window.on_event = on_window_event
     # ─────────────────────────────────────────────────────────────
-
-    init_db()
 
     page.theme = ft.Theme(
     navigation_rail_theme=ft.NavigationRailTheme(
