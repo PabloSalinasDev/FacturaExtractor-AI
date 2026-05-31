@@ -53,12 +53,8 @@ def start_daemon(page: ft.Page):
         "--verbose", "False",
     ]
 
-    # INDICADOR CRÍTICO DE WINDOWS: CREATE_NO_WINDOW (0x08000000)
-    # Esto le dice a Windows: "Ejecuta esto en segundo plano 100% invisible, 
-    # sin abrir ventanas CMD adicionales, pero manteniendo intacto el entorno virtual pipx".
     creation_flags = 0x08000000
 
-    # Utiliza close_fds=True para desvincular completamente las descripciones de archivos de la terminal actual.
     _daemon_process=subprocess.Popen(
         cmd, 
         stdout=subprocess.DEVNULL, 
@@ -85,7 +81,6 @@ def start_daemon(page: ft.Page):
     try:
         dummy_text = "--- a/init.txt\n+++ b/init.txt\n@@ -0,0 +1 @@\n+init"
         
-        # CORRECCIÓN: Se remueve el argumento 'page' que no pertenece a la firma de la función
         extract_invoice_data(dummy_text)
 
         show_snack(page, "¡El modelo está cargado y listo en segundo plano!")
@@ -107,7 +102,6 @@ def stop_daemon():
         except Exception:
             pass
 
-    # CORRECCIÓN: Usamos la bandera global para verificar si psutil está disponible
     if not _HAS_PSUTIL:
         logging.error("Error al cerrar la sesión. La librería 'psutil' no está disponible.")
         return
@@ -153,7 +147,6 @@ def extract_invoice_data(text):
         "stop": ["<|im_end|>", "###"]
     }
 
-    # CORRECCIÓN: Inicializamos las variables de texto vacías arriba para evitar UnboundLocalError en el except
     json_message = ""
     json_clean = ""
     

@@ -63,7 +63,7 @@ def _build_chart_image(labels, values, title, xlabel, moneda):
             fontsize=8, color=TITLE_COLOR,
         )
 
-    # Pasamos la moneda dinámica al label del eje Y
+    # Se pasa la moneda dinámica al label del eje Y
     _style_ax(ax, title, xlabel, f"Monto ({moneda})")
     if len(labels) > 6:
         plt.xticks(rotation=30, ha="right")
