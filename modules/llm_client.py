@@ -9,7 +9,7 @@ import subprocess
 import logging
 
 from modules.config  import MODEL_PATH, PORT
-from views.helpers   import show_snack, ERROR
+from views.helpers   import show_snack
 
 _daemon_process = None
 
@@ -106,6 +106,7 @@ def stop_daemon():
             return
         except Exception:
             pass
+
     # CORRECCIÓN: Usamos la bandera global para verificar si psutil está disponible
     if not _HAS_PSUTIL:
         logging.error("Error al cerrar la sesión. La librería 'psutil' no está disponible.")
@@ -183,7 +184,7 @@ def extract_invoice_data(text):
         return data
 
     except Exception as e:
-        logging.warning("[LLM ERROR] Falló la extracción veloz: %s. Raw: '%s'", e, json_message, ERROR)
+        logging.warning("[LLM ERROR] Falló la extracción veloz: %s. Raw: '%s'", e, json_message)
         return {
             "proveedor": "Desconocido",
             "fecha": "",
