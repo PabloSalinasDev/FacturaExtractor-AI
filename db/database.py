@@ -30,7 +30,7 @@ def init_db():
                 estado      TEXT NOT NULL DEFAULT 'pendiente',
                 fuente      TEXT NOT NULL DEFAULT 'PDF',
                 archivo     TEXT,
-                created_at  TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+                created_at  TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%S', 'now', 'localtime'))
             )
         """)
         conn.execute("""
