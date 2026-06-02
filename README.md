@@ -16,7 +16,7 @@ Aplicación de escritorio para Windows que extrae automáticamente los datos de 
 
 ## Características
 
-- **100% Local**: Usa `llama-cpp-python` para correr inferencia completamente offline.
+- **100% Local**: Usa `llama-cpp-python` para correr inferencia completamente offline a través de un servidor HTTP en segundo plano en `localhost:8080`.
 - **Extracción inteligente**: Detecta automáticamente si el PDF es digital o escaneado y elige el método de lectura correcto.
 - **OCR integrado**: Para facturas escaneadas usa EasyOCR con soporte para español e inglés.
 - **Historial con base de datos**: Todas las facturas extraídas se guardan en una base de datos SQLite local.
@@ -30,7 +30,7 @@ Aplicación de escritorio para Windows que extrae automáticamente los datos de 
 
 ## Cómo funciona
 
-1. Al abrir la app, el modelo de IA se carga en RAM en segundo plano.
+1. Al abrir la app, se descarga el modelo de IA si no se encuentra en el equipo, luego el modelo se carga en RAM en segundo plano.
 2. Seleccionás un PDF de factura.
 3. La app extrae el texto del PDF (nativo o via OCR si está escaneado).
 4. El modelo extrae: **proveedor**, **fecha**, **monto** y **moneda**.
@@ -89,13 +89,8 @@ python -m venv .venv
 .venv\Scripts\activate
 ```
 
-Para asegurar que la IA compile y se ejecute exclusivamente en la CPU, en la raíz del proyecto ejecuta este comando:
-
-#### En Windows (PowerShell) - *Recomendado para VS Code*
-
 ```bash
 # 2. Instalar dependencias
-$env:CMAKE_ARGS="-DLLAMA_BLAS=ON -DLLAMA_BLAS_VENDOR=OpenBLAS"
 pip install -e .
 ```
 
@@ -118,7 +113,7 @@ La extracción corre 100% en CPU. El tiempo depende del hardware:
 ## Requisitos
 
 - Windows 10/11
-- Python 3.9+
+- Python 3.10+
 - ~1 GB de espacio en disco para el modelo
 
 ## Dependencias
