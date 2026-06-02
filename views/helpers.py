@@ -23,6 +23,14 @@ MONEDAS       = ["ARS", "USD", "EUR", "BRL"]
 
 
 # ── COMPONENTES ──────────────────────────────────────────────────────
+
+def update_llm_ui_status(icon_comp: ft.Icon, is_online: bool):
+    """Actualiza el componente de la UI y fuerza el renderizado."""
+    color = ft.Colors.GREEN if is_online else "#888888"
+    icon_comp.color = color
+    icon_comp.update()
+
+
 def show_snack(page: ft.Page, msg, color = ACCENT):
     snack = ft.SnackBar(
         content=ft.Container(

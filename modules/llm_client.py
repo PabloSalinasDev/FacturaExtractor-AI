@@ -9,7 +9,7 @@ import subprocess
 import logging
 
 from modules.config  import MODEL_PATH, PORT
-from views.helpers   import show_snack
+from views.helpers   import show_snack, update_llm_ui_status
 
 _daemon_process = None
 
@@ -28,9 +28,10 @@ _n_threads_optimized = max(1, _physical_cores)
 _n_threads_batch_optimized = max(1, _logical_cores)
 
 
-def start_daemon(page: ft.Page):
+def start_daemon(page: ft.Page, status_icon):
     """Inicia el servidor llama_cpp como un proceso silencioso en segundo plano utilizando sus parámetros optimizados."""
     global _daemon_process
+
     try:
         res = httpx.get(f"http://localhost:{PORT}/v1/models")
         if res.status_code == 200:
@@ -87,6 +88,7 @@ def start_daemon(page: ft.Page):
     except Exception:
         # Si por alguna razón falla el calentamiento, no cancela el inicio del servidor.
         show_snack(page, "¡El modelo está cargado y listo en segundo plano! (se omitió la preparación de caché)")
+    update_llm_ui_status(status_icon, True)
 
 def stop_daemon():
     """Encuentra el proceso del servidor en segundo plano y lo finaliza para liberar memoria."""

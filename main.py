@@ -11,7 +11,7 @@ import threading
 from db.database          import init_db
 from modules.config       import model_exists, download_model
 from modules.llm_client   import start_daemon, stop_daemon
-from views.helpers        import PRIMARY, ACCENT, BG, CARD_BG, TEXT_DARK, TEXT_GRAY
+from views.helpers        import update_llm_ui_status, PRIMARY, ACCENT, BG, CARD_BG, TEXT_DARK, TEXT_GRAY, LABEL_COLOR
 from views.extractor_view import build_extractor
 from views.history_view   import build_history
 from views.settings_view  import build_settings
@@ -141,11 +141,23 @@ def main(page: ft.Page):
         bgcolor=PRIMARY, padding=ft.padding.symmetric(8, 12), width=72,
     )
 
+    status_icon = ft.Icon(ft.Icons.CIRCLE, size=18, color=LABEL_COLOR)
+
+    trailing=ft.Container(
+            content=ft.Column([
+                ft.Row([ft.Text("IA", size=15, color="#cccccc", weight=ft.FontWeight.BOLD), status_icon], alignment=ft.MainAxisAlignment.CENTER, spacing=3),
+
+                ft.Text("v1.0.0", size=10, color=TEXT_GRAY),
+            ], horizontal_alignment=ft.CrossAxisAlignment.CENTER,),
+            padding=ft.padding.only(top=20),
+            bgcolor=PRIMARY, width=72,
+        )
+
     def launch_main_app():
         page.controls.clear()
         navigate("extractor")
         page.add(ft.Row([
-            ft.Column([header, nav_rail], spacing=0, width=72),
+            ft.Column([header, nav_rail, trailing], spacing=0, width=72),
             ft.VerticalDivider(width=1, color="#eeeeee"),
             content_area,
         ], expand=True, spacing=0))
@@ -195,7 +207,7 @@ def main(page: ft.Page):
                 page.update()
                 time.sleep(1)
                 launch_main_app()
-                threading.Thread(target=start_daemon(page), daemon=True).start()
+                threading.Thread(target=start_daemon(page, status_icon), daemon=True).start()
 
             def on_error(msg):
                 status_lbl.value         = f"Error: {msg}"
@@ -250,7 +262,7 @@ def main(page: ft.Page):
     # ── ARRANQUE ─────────────────────────────────────────────────────
     if model_exists():
         launch_main_app()
-        threading.Thread(target=start_daemon(page), daemon=True).start()
+        threading.Thread(target=start_daemon(page, status_icon), daemon=True).start()
     else:
         show_download_screen()
 
