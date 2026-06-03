@@ -59,7 +59,10 @@ def set_llm_state(state: str):
         _text.value = "IA: Offline"
         _text.color = "#aaaaaa"
 
-    _status_ui.update()
+    if _status_ui.page:
+        _status_ui.update()
+
+    #_status_ui.update()
 
 def show_snack(page: ft.Page, msg, color = ACCENT):
     snack = ft.SnackBar(

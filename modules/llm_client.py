@@ -94,7 +94,6 @@ def start_daemon(page: ft.Page):
 def stop_daemon():
     """Encuentra el proceso del servidor en segundo plano y lo finaliza para liberar memoria."""
     global _daemon_process
-    
     # Intento de cierre optimizado y directo mediante la referencia del proceso creado
     if _daemon_process:
         try:

@@ -16,7 +16,7 @@ from views.extractor_view import build_extractor
 from views.history_view   import build_history
 from views.settings_view  import build_settings
 from views.charts_view    import build_charts
-from config.config_app    import myappid, APP_TITLE 
+from config.config_app    import myappid, APP_TITLE, APP_VERSION
 
 
 # Establece una identidad única para el proceso en Windows (AppUserModelID)
@@ -156,6 +156,7 @@ def main(page: ft.Page):
     sidebar = ft.Column([header, nav_rail, trailing], spacing=0, width=72)
 
     def launch_main_app():
+        page.controls.clear()
         if not page.controls:
             page.add(ft.Row([
                 sidebar,
@@ -181,8 +182,6 @@ def main(page: ft.Page):
                 padding=ft.padding.symmetric(horizontal=24, vertical=14),
             )
         )
-        btn_skip = ft.TextButton("Omitir por ahora",
-                                style=ft.ButtonStyle(color=TEXT_GRAY))
 
         progress_section = ft.Column([
             progress_bar,
@@ -193,7 +192,6 @@ def main(page: ft.Page):
 
         def start_dl(e):
             btn_dl.visible           = False
-            btn_skip.visible         = False
             progress_section.visible = True
             status_lbl.value         = "Descargando... esto puede tardar varios minutos."
             page.update()
@@ -214,14 +212,12 @@ def main(page: ft.Page):
             def on_error(msg):
                 status_lbl.value         = f"Error: {msg}"
                 btn_dl.visible           = True
-                btn_skip.visible         = True
                 progress_section.visible = False
                 page.update()
 
             download_model(on_progress, on_done, on_error)
 
         btn_dl.on_click   = start_dl
-        btn_skip.on_click = lambda e: launch_main_app()
 
         page.add(ft.Container(
             content=ft.Column([
@@ -247,7 +243,11 @@ def main(page: ft.Page):
                         ft.Divider(height=10, color="transparent"),
                         progress_section,
                         btn_dl,
-                        btn_skip,
+                        ft.Text(
+                            value=APP_VERSION,
+                            size=10, color=TEXT_GRAY, weight=ft.FontWeight.BOLD,
+                            text_align=ft.TextAlign.CENTER,
+                        ),
                     ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=10),
                     bgcolor=CARD_BG, border_radius=16, padding=30,
                     shadow=ft.BoxShadow(blur_radius=16, color="#00000015",
