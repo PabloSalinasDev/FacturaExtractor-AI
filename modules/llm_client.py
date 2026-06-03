@@ -9,7 +9,7 @@ import subprocess
 import logging
 
 from modules.config  import MODEL_PATH, PORT
-from views.helpers   import show_snack, update_llm_ui_status
+from views.helpers   import show_snack, set_llm_state
 
 _daemon_process = None
 
@@ -28,7 +28,7 @@ _n_threads_optimized = max(1, _physical_cores)
 _n_threads_batch_optimized = max(1, _logical_cores)
 
 
-def start_daemon(page: ft.Page, status_icon):
+def start_daemon(page: ft.Page):
     """Inicia el servidor llama_cpp como un proceso silencioso en segundo plano utilizando sus parámetros optimizados."""
     global _daemon_process
 
@@ -63,7 +63,6 @@ def start_daemon(page: ft.Page, status_icon):
         creationflags=creation_flags,
         close_fds=True
     )
-
     server_ready = False
     for _ in range(30):
         try:
@@ -77,7 +76,7 @@ def start_daemon(page: ft.Page, status_icon):
     if not server_ready:
         logging.warning("✗ Error: el daemon del servidor tardó demasiado en cargarse en la RAM.")
         return
-
+    set_llm_state("Loading")
     # Se fuerza al mensaje a cargarse al inicio (Precalentamiento)
     try:
         dummy_text = "--- a/init.txt\n+++ b/init.txt\n@@ -0,0 +1 @@\n+init"
@@ -88,7 +87,7 @@ def start_daemon(page: ft.Page, status_icon):
     except Exception:
         # Si por alguna razón falla el calentamiento, no cancela el inicio del servidor.
         show_snack(page, "¡El modelo está cargado y listo en segundo plano! (se omitió la preparación de caché)")
-    update_llm_ui_status(status_icon, True)
+    set_llm_state("Online")
 
 def stop_daemon():
     """Encuentra el proceso del servidor en segundo plano y lo finaliza para liberar memoria."""

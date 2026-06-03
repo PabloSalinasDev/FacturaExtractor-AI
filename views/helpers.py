@@ -23,12 +23,43 @@ MONEDAS       = ["ARS", "USD", "EUR", "BRL"]
 
 
 # ── COMPONENTES ──────────────────────────────────────────────────────
+_icon = ft.Icon(ft.Icons.CIRCLE, size=18, color="#aaaaaa")
+_ring = ft.ProgressRing(width=16, height=16, stroke_width=2, visible=False)
+_text = ft.Text("IA: Offline", size=11, weight=ft.FontWeight.BOLD, color="#aaaaaa")
 
-def update_llm_ui_status(icon_comp: ft.Icon, is_online: bool):
-    """Actualiza el componente de la UI y fuerza el renderizado."""
-    color = ft.Colors.GREEN if is_online else "#888888"
-    icon_comp.color = color
-    icon_comp.update()
+
+_status_ui = ft.Container(
+    content=ft.Column([
+        ft.Row([_icon, _ring], alignment=ft.MainAxisAlignment.CENTER),
+        _text,
+    ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=4),
+)
+
+def get_llm_status_ui():
+    """Esta función siempre devuelve el mismo objeto único."""
+    return _status_ui
+
+def set_llm_state(state: str):
+
+    if state == "Loading":
+        _icon.visible = False
+        _ring.visible = True
+        _text.value = "Cargando..."
+        _text.color = "#aaaaaa"
+    elif state == "Online":
+        _icon.visible = True
+        _ring.visible = False
+        _icon.color = ACCENT
+        _text.value = "IA: Online"
+        _text.color = "#aaaaaa"
+    else: # offline
+        _icon.visible = True 
+        _ring.visible = False
+        _icon.color = LABEL_COLOR
+        _text.value = "IA: Offline"
+        _text.color = "#aaaaaa"
+
+    _status_ui.update()
 
 
 def show_snack(page: ft.Page, msg, color = ACCENT):
