@@ -156,8 +156,8 @@ def _chart_por_anio(data, moneda):
 def build_charts(page):
     img_control = ft.Image(fit=ft.ImageFit.CONTAIN, expand=True)
     no_data_msg = ft.Text(
-        "No hay facturas registradas para mostrar.",
-        size=13, color=TEXT_GRAY,
+        "No hay facturas registradas para mostrar",
+        size=20, color=TEXT_GRAY,
     )
     chart_container = ft.Container(
         content=ft.Column(
@@ -170,7 +170,7 @@ def build_charts(page):
     no_data_container = ft.Container(
         content=ft.Column(
             [
-                ft.Icon(ft.Icons.BAR_CHART_OUTLINED, size=40, color="#cccccc"),
+                ft.Icon(ft.Icons.BAR_CHART_OUTLINED, size=100, color="#cccccc"),
                 no_data_msg,
             ],
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
