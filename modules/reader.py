@@ -120,9 +120,9 @@ def extract_text(path, page=ft.Page):
     # 3. RECORTE: solo en facturas muy extensas para evitar ruido innecesario.
     lineas = text_limpio.splitlines()
 
-    if len(lineas) > 35:
+    if len(lineas) > 32:
         # 15 líneas del principio (encabezado + detalle) + 15 del final (totales)
-        text_final = "\n".join(lineas[:18]) + "\n" + "\n".join(lineas[-17:])
+        text_final = "\n".join(lineas[:15]) + "\n" + "\n".join(lineas[-17:])
     else:
         text_final = "\n".join(lineas)
 
