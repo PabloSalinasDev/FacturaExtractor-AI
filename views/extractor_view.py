@@ -8,6 +8,7 @@ from db.crud              import save_factura, get_setting
 from modules.reader       import extract_text
 from modules.file_manager import save_pdf
 from modules.llm_client   import extract_invoice_data
+from views.state_manager        import AppState
 from views.helpers        import (
     card, section_title, lbl, tf, btn_primary, btn_outline,
     show_snack, ACCENT, PRIMARY, TEXT_DARK, TEXT_GRAY, MONEDAS, ERROR
@@ -37,21 +38,28 @@ def build_extractor(page: ft.Page):
     fuente_pdf_btn = ft.ElevatedButton(
         "Archivo PDF",
         style=ft.ButtonStyle(
-            bgcolor={ft.ControlState.DEFAULT: PRIMARY},
-            color={ft.ControlState.DEFAULT: "white"},
+            bgcolor={ft.ControlState.DEFAULT: PRIMARY, ft.ControlState.DISABLED: "#cccccc"},
+            color={ft.ControlState.DEFAULT: "white", ft.ControlState.DISABLED: "#999999"},
             shape=ft.RoundedRectangleBorder(radius=8),
             padding=ft.padding.symmetric(horizontal=20, vertical=12),
-        )
+        ), disabled=not AppState.is_ready()
     )
     fuente_mensaje_btn = ft.OutlinedButton(
         "Texto Mensaje",
         style=ft.ButtonStyle(
-            side=ft.BorderSide(1.5, PRIMARY),
-            color=PRIMARY,
+            side={ft.ControlState.DEFAULT: ft.BorderSide(1.5, PRIMARY), ft.ControlState.DISABLED: ft.BorderSide(1.5, "#999999")},
+            color={ft.ControlState.DEFAULT: PRIMARY, ft.ControlState.DISABLED: "#999999"},
             shape=ft.RoundedRectangleBorder(radius=8),
             padding=ft.padding.symmetric(horizontal=20, vertical=12),
-        )
+        ), disabled=not AppState.is_ready()
     )
+
+    def on_ready():
+        fuente_pdf_btn.disabled = False
+        fuente_mensaje_btn.disabled = False
+        page.update()
+
+    AppState.subscribe(on_ready)
 
     mensaje_area = ft.Column([
         lbl("Pegá el texto con los datos de la factura:"),

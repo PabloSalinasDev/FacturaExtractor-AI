@@ -11,7 +11,7 @@ import threading
 from db.database          import init_db
 from modules.config       import model_exists, download_model
 from modules.llm_client   import start_daemon, stop_daemon
-from views.helpers        import get_llm_status_ui, PRIMARY, ACCENT, BG, CARD_BG, TEXT_DARK, TEXT_GRAY, LABEL_COLOR
+from views.helpers        import get_llm_status_ui, PRIMARY, ACCENT, BG, CARD_BG, TEXT_DARK, TEXT_GRAY
 from views.extractor_view import build_extractor
 from views.history_view   import build_history
 from views.settings_view  import build_settings

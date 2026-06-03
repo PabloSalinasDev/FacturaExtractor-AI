@@ -10,6 +10,7 @@ import logging
 
 from modules.config  import MODEL_PATH, PORT
 from views.helpers   import show_snack, set_llm_state
+from views.state_manager import AppState
 
 _daemon_process = None
 
@@ -88,6 +89,7 @@ def start_daemon(page: ft.Page):
         # Si por alguna razón falla el calentamiento, no cancela el inicio del servidor.
         show_snack(page, "¡El modelo está cargado y listo en segundo plano! (se omitió la preparación de caché)")
     set_llm_state("Online")
+    AppState.set_ready(True)
 
 def stop_daemon():
     """Encuentra el proceso del servidor en segundo plano y lo finaliza para liberar memoria."""

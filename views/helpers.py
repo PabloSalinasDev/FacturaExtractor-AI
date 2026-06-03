@@ -61,7 +61,6 @@ def set_llm_state(state: str):
 
     _status_ui.update()
 
-
 def show_snack(page: ft.Page, msg, color = ACCENT):
     snack = ft.SnackBar(
         content=ft.Container(
