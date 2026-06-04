@@ -30,7 +30,7 @@ Aplicación de escritorio para Windows que extrae automáticamente los datos de 
 
 ## Cómo funciona
 
-1. Al abrir la app, se descarga el modelo de IA si no se encuentra en el equipo, luego el modelo se carga en RAM en segundo plano.
+1. Al abrir la app, se descarga el modelo de IA si no se encuentra en el equipo, luego el modelo se carga en RAM en segundo plano, cuando termina se muestra con un indicador que ya se encuentra online.
 2. Seleccionás un PDF de factura.
 3. La app extrae el texto del PDF (nativo o via OCR si está escaneado).
 4. El modelo extrae: **proveedor**, **fecha**, **monto** y **moneda**.
@@ -43,9 +43,11 @@ Aplicación de escritorio para Windows que extrae automáticamente los datos de 
 
 ## Capturas de pantalla
 
-| Extracción | Historial | Gráficos |
-|:---:|:---:|:---:|
-| ![Extracción](assets/Extracción.png) | ![Historial](assets/Historial.png) | ![Gráficos](assets/Gráficos.png) |
+
+ ![Extracción](assets/Extracción.png) 
+ ![Historial](assets/Historial.png) 
+ ![Gráficos](assets/Gráficos.png)
+ ![Configuración](assets/Configuración.png)
 
 ---
 
@@ -76,6 +78,8 @@ FacturaExtractor/
 │   ├── history_view.py     ← historial de facturas
 │   └── settings_view.py    ← configuración de carpeta destino
 ├── main.py                 ← punto de entrada, navegación, ciclo de vida
+├── README.md
+├── README.txt
 └── pyproject.toml
 ```
 
