@@ -146,7 +146,7 @@ def main(page: ft.Page):
     trailing = ft.Container(
         content=ft.Column([
             status,
-            ft.Text("Ver. 1.0.0", size=10, weight=ft.FontWeight.BOLD, color=TEXT_GRAY),
+            ft.Text(value=APP_VERSION, size=10, weight=ft.FontWeight.BOLD, color=TEXT_GRAY),
         ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=4),
         padding=ft.padding.only(top=20),
         bgcolor=PRIMARY, 
@@ -244,7 +244,7 @@ def main(page: ft.Page):
                         progress_section,
                         btn_dl,
                         ft.Text(
-                            value=APP_VERSION,
+                            value=f"PyBloSoft © 2026 - {APP_VERSION}",
                             size=10, color=TEXT_GRAY, weight=ft.FontWeight.BOLD,
                             text_align=ft.TextAlign.CENTER,
                         ),
