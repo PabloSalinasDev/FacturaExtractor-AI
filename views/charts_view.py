@@ -48,8 +48,9 @@ def _style_ax(ax, title, xlabel, ylabel):
 def _build_chart_image(labels, values, title, xlabel, moneda):
     ancho_dinamico = max(6, len(labels) * 0.5)
     fig, ax = plt.subplots(figsize=(ancho_dinamico, 4))
+    bar_width = 0.34 if len(labels) <= 6 else min(0.34, 0.1 + len(labels) * 0.04)
     bars = ax.bar(labels, values, color=BAR_COLOR, edgecolor=BAR_EDGE,
-                linewidth=0.6, width=0.55, zorder=3)
+                linewidth=0.6, width=bar_width, zorder=3)
     
     if len(labels) == 1:
         ax.set_xlim(-1, 1)
@@ -106,39 +107,47 @@ def _get_data():
     return result
 
 
-def _chart_por_dia(data, moneda):
+def _chart_por_dia(data, moneda, anio_filtro=None, mes_filtro=None):
+    hoy = datetime.now()
+    anio_ref = anio_filtro if anio_filtro else hoy.year
+    mes_ref  = mes_filtro  if mes_filtro  else hoy.month
+
+    filtrada = [r for r in data if r["anio"] == anio_ref and r["mes"] == mes_ref]
+
     totales = defaultdict(float)
-    for r in data:
-        key = (r["anio"], r["mes"], r["dia"])
-        totales[key] += r["monto"]
+    for r in filtrada:
+        totales[r["dia"]] += r["monto"]
 
     if not totales:
         return None
 
+    MESES = ["Ene","Feb","Mar","Abr","May","Jun",
+            "Jul","Ago","Sep","Oct","Nov","Dic"]
     keys_sorted = sorted(totales.keys())
-    
-    if len(keys_sorted) > 30:
-        keys_sorted = keys_sorted[-30:]
-
-    labels = [f"{d:02d}-{m:02d}-{y}" for y, m, d in keys_sorted]
+    labels = [f"{d:02d}" for d in keys_sorted]
     values = [totales[k] for k in keys_sorted]
-    
-    return _build_chart_image(labels, values, "Gastos por Día (Últimos 30 días con actividad)", "Fecha", moneda)
+    titulo = f"Gastos por Día — {MESES[mes_ref-1]} {anio_ref}"
+    return _build_chart_image(labels, values, titulo, "Día", moneda)
 
 
-def _chart_por_mes(data, moneda):
+def _chart_por_mes(data, moneda, anio_filtro=None):
+    hoy = datetime.now()
+    anio_ref = anio_filtro if anio_filtro else hoy.year
+
+    filtrada = [r for r in data if r["anio"] == anio_ref]
+
     MESES = ["Ene","Feb","Mar","Abr","May","Jun",
             "Jul","Ago","Sep","Oct","Nov","Dic"]
     totales = defaultdict(float)
-    for r in data:
-        key = (r["anio"], r["mes"])
-        totales[key] += r["monto"]
+    for r in filtrada:
+        totales[r["mes"]] += r["monto"]
     if not totales:
         return None
     keys_sorted = sorted(totales.keys())
-    labels = [f"{MESES[m-1]} {y}" for y, m in keys_sorted]
+    labels = [MESES[m-1] for m in keys_sorted]
     values = [totales[k] for k in keys_sorted]
-    return _build_chart_image(labels, values, "Gastos por Mes", "Mes", moneda)
+    titulo = f"Gastos por Mes — {anio_ref}"
+    return _build_chart_image(labels, values, titulo, "Mes", moneda)
 
 
 def _chart_por_anio(data, moneda):
@@ -217,18 +226,109 @@ def build_charts(page):
     btn_export = btn_outline("Exportar Reporte", do_export,
                             icon=ft.Icons.DOWNLOAD, color=PRIMARY)
 
+    def _dd_style(width):
+        return dict(
+            width=width,
+            color=PRIMARY,
+            border_color=PRIMARY,
+            label_style=ft.TextStyle(color=PRIMARY, size=12, weight=ft.FontWeight.BOLD),
+            border_width=1.5,
+        )
+
+    MESES_OPTS = [
+        ft.dropdown.Option("1",  "Enero"),   ft.dropdown.Option("2",  "Febrero"),
+        ft.dropdown.Option("3",  "Marzo"),   ft.dropdown.Option("4",  "Abril"),
+        ft.dropdown.Option("5",  "Mayo"),    ft.dropdown.Option("6",  "Junio"),
+        ft.dropdown.Option("7",  "Julio"),   ft.dropdown.Option("8",  "Agosto"),
+        ft.dropdown.Option("9",  "Sep"),     ft.dropdown.Option("10", "Oct"),
+        ft.dropdown.Option("11", "Nov"),     ft.dropdown.Option("12", "Dic"),
+    ]
+
+    dd_moneda = ft.Dropdown(
+        label="Moneda",
+        options=[
+            ft.dropdown.Option("ARS"),
+            ft.dropdown.Option("USD"),
+            ft.dropdown.Option("EUR"),
+            ft.dropdown.Option("BRL"),
+        ],
+        value="ARS",
+        **_dd_style(110),
+        on_change=lambda e: _refresh_chart(),
+    )
+
+    dd_anio = ft.Dropdown(
+        label="Año",
+        options=[],   # se pobla en _refresh_anios()
+        value=None,
+        hint_text="Todos",
+        **_dd_style(110),
+        on_change=lambda e: _refresh_chart(),
+    )
+
+    dd_mes = ft.Dropdown(
+        label="Mes",
+        options=MESES_OPTS,
+        value=None,
+        hint_text="Mes actual",
+        **_dd_style(130),
+        on_change=lambda e: _refresh_chart(),
+    )
+
+    def _refresh_anios():
+        """Rellena dd_anio con los años que existen en la BD para la moneda elegida."""
+        data_total = _get_data()
+        moneda = dd_moneda.value
+        anios = sorted({r["anio"] for r in data_total if r["moneda"] == moneda}, reverse=True)
+        dd_anio.options = [ft.dropdown.Option(str(a)) for a in anios]
+        # Si el valor actual ya no existe en la nueva lista, lo limpiamos
+        valores_validos = [str(a) for a in anios]
+        if dd_anio.value and dd_anio.value not in valores_validos:
+            dd_anio.value = None
+            dd_mes.value  = None  # si el año desaparece, el mes pierde contexto
+            return
+
+        # Validar que el mes seleccionado tenga datos en el año/moneda actual
+        if dd_mes.value:
+            anio_ref = int(dd_anio.value) if dd_anio.value else datetime.now().year
+            mes_ref  = int(dd_mes.value)
+            hay_datos = any(
+                r["anio"] == anio_ref and r["mes"] == mes_ref and r["moneda"] == moneda
+                for r in data_total
+            )
+            if not hay_datos:
+                dd_mes.value = None
+
+    def _refresh_chart():
+        if not active["fn"]:
+            _refresh_anios()
+            page.update()
+            return
+        _refresh_anios()
+        show_chart(active["fn"], active["btn"])
+
     def show_chart(chart_fn, btn):
         _set_active(btn, chart_fn)
-        data_total = _get_data()
-        
-        # Se filtra la data en memoria por la moneda seleccionada en el Dropdown
-        moneda_seleccionada = dd_moneda.value
-        data_filtrada = [r for r in data_total if r["moneda"] == moneda_seleccionada]
-        
-        if data_filtrada:
-            b64 = chart_fn(data_filtrada, moneda_seleccionada)
-        else:
-            b64 = None
+        data_total   = _get_data()
+        moneda       = dd_moneda.value
+        anio_val     = int(dd_anio.value) if dd_anio.value else None
+        mes_val      = int(dd_mes.value)  if dd_mes.value  else None
+
+        data_filtrada = [r for r in data_total if r["moneda"] == moneda]
+
+        # Despachar según el botón activo
+        if chart_fn is _chart_por_anio:
+            # Siempre todos los años — ignora los dropdowns de año/mes
+            b64 = _chart_por_anio(data_filtrada, moneda)
+
+        elif chart_fn is _chart_por_mes:
+            # Filtra por año seleccionado; si no hay, usa el año en curso
+            b64 = _chart_por_mes(data_filtrada, moneda, anio_filtro=anio_val)
+
+        else:  # _chart_por_dia
+            # Filtra por mes seleccionado (y el año de ese mes si también fue elegido)
+            b64 = _chart_por_dia(data_filtrada, moneda,
+                                    anio_filtro=anio_val, mes_filtro=mes_val)
 
         if b64:
             img_control.src_base64    = b64
@@ -239,30 +339,15 @@ def build_charts(page):
             no_data_container.visible = True
         page.update()
 
-    dd_moneda = ft.Dropdown(
-        label="Moneda",
-        width=110,
-        color=PRIMARY,
-        border_color=PRIMARY,
-        label_style=ft.TextStyle(color=PRIMARY, size=12, weight=ft.FontWeight.BOLD),
-        border_width=1.5,
-        options=[
-            ft.dropdown.Option("ARS"),
-            ft.dropdown.Option("USD"),
-            ft.dropdown.Option("EUR"),
-            ft.dropdown.Option("BRL"),
-        ],
-        value="ARS",
-        # Al cambiar la moneda, si hay un gráfico seleccionado previamente, lo vuelve a dibujar con el nuevo filtro
-        on_change=lambda e: show_chart(active["fn"], active["btn"]) if active["fn"] else page.update()
-    )
-
     btn_dia  = ft.ElevatedButton("Por Día",  style=_btn_style(False),
                                 on_click=lambda e: show_chart(_chart_por_dia,  btn_dia))
     btn_mes  = ft.ElevatedButton("Por Mes",  style=_btn_style(False),
                                 on_click=lambda e: show_chart(_chart_por_mes,  btn_mes))
     btn_anio = ft.ElevatedButton("Por Año",  style=_btn_style(False),
                                 on_click=lambda e: show_chart(_chart_por_anio, btn_anio))
+
+    # Poblar años al construir la vista
+    _refresh_anios()
 
     return ft.Column([
         section_title("Gráficas de Gastos"),
@@ -271,7 +356,11 @@ def build_charts(page):
             ft.Text("Seleccioná el período y divisa", size=14,
                     weight=ft.FontWeight.BOLD, color=ACCENT),
             ft.Divider(height=1, color="#f0f0f0"),
-            ft.Row([dd_moneda, btn_dia, btn_mes, btn_anio, btn_export], spacing=12),
+            ft.Row(
+                [dd_moneda, dd_anio, dd_mes, btn_dia, btn_mes, btn_anio, btn_export],
+                spacing=12,
+                wrap=True,
+            ),
         ], spacing=8)),
         chart_container,
         no_data_container,
