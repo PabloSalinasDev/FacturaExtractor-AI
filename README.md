@@ -19,7 +19,7 @@ Aplicación de escritorio para Windows que extrae automáticamente los datos de 
 - **100% Local**: Usa `llama-cpp-python` para correr inferencia completamente offline a través de un servidor HTTP en segundo plano en `localhost:8080`.
 - **Extracción inteligente**: Detecta automáticamente si el PDF es digital o escaneado y elige el método de lectura correcto.
 - **OCR integrado**: Para facturas escaneadas usa EasyOCR con soporte para español e inglés.
-- **Historial con base de datos**: Todas las facturas extraídas se guardan en una base de datos SQLite local.
+- **Historial con base de datos**: Todas las facturas extraídas se guardan en una base de datos SQLite local y cuenta con exportación a CSV.
 - **Gráficos y reportes**: Visualización de gastos por proveedor, fecha y moneda con exportación a CSV.
 - **Soporte multidivisa**: Detecta ARS, USD, EUR y BRL automáticamente.
 - **Carpeta configurable**: Podés elegir dónde se guardan los PDFs renombrados automáticamente.
@@ -110,7 +110,7 @@ La extracción corre 100% en CPU. El tiempo depende del hardware:
 |----------|----------------|
 | CPU moderno de escritorio (8+ núcleos) | ~5–10 segundos |
 | Laptop / CPU más antiguo | ~10–16 segundos |
-| PDFs escaneados (OCR) | 25–45 segundos adicionales |
+| PDFs escaneados (OCR) | 25–45 segundos |
 
 ---
 
