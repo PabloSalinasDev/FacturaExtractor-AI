@@ -106,11 +106,10 @@ pip install -e .
 
 La extracción corre 100% en CPU. El tiempo depende del hardware:
 
-| Hardware | Tiempo estimado |
-|----------|----------------|
-| CPU moderno de escritorio (8+ núcleos) | ~5–10 segundos |
-| Laptop / CPU más antiguo | ~10–16 segundos |
-| PDFs escaneados (OCR) | 25–45 segundos |
+| Hardware | Tiempo estimado PDFs | Tiempo estimado PDFs escaneados (OCR) |
+|----------|----------------|----------------|
+| CPU moderno de escritorio (8+ núcleos) | ~5–10 segundos | ~10–25 segundos |
+| Laptop / CPU más antiguo | ~10–16 segundos | ~25–45 segundos |
 
 ---
 
@@ -133,6 +132,10 @@ La extracción corre 100% en CPU. El tiempo depende del hardware:
 | pillow | Procesamiento de imágenes |
 | matplotlib | Gráficos de gastos |
 | psutil | Gestión del proceso del daemon |
+
+---
+
+**Nota**: Al ser una herramienta de utilidad independiente y no estar firmada digitalmente, es posible que Windows SmartScreen muestre una advertencia. Puede ejecutarla con total seguridad seleccionando **'Más información' -> 'Ejecutar de todas formas'.**
 
 ---
 
