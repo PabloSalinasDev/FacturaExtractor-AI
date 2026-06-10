@@ -40,8 +40,15 @@ def start_daemon(page: ft.Page):
     except httpx.RequestError:
         pass
 
+    # Detecta si corre como ejecutable compilado
+    if getattr(sys, 'frozen', False) or hasattr(sys, 'frozen') or "__compiled__" in globals():
+        base_path = os.path.dirname(sys.executable)
+        python_bin = os.path.join(base_path, "python_embed", "python.exe")
+    else:
+        python_bin = sys.executable
+
     cmd = [
-        sys.executable, "-m", "llama_cpp.server",
+        python_bin, "-m", "llama_cpp.server",
         "--model", str(MODEL_PATH),
         "--port", str(PORT),
         "--host", "localhost",
@@ -75,7 +82,7 @@ def start_daemon(page: ft.Page):
             continue
             
     if not server_ready:
-        logging.warning("✗ Error: el daemon del servidor tardó demasiado en cargarse en la RAM.")
+        logging.warning("Error: el daemon del servidor tardó demasiado en cargarse en la RAM.")
         return
     set_llm_state("Loading")
     # Se fuerza al mensaje a cargarse al inicio (Precalentamiento)
