@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-06-11
+
+### Added
+- **Resolución de rutas del Daemon:** Se reestructuró la función `start_daemon` para detectar dinámicamente si la aplicación se ejecuta en modo congelado (`Nuitka`). Ahora conmuta automáticamente entre `sys.executable` en entorno de desarrollo y el binario portátil `python_embed/python.exe` en producción.
+- **Estrategia de empaquetado de dependencias:** Se migró el copiado selectivo de librerías hacia un clonado masivo del directorio completo `.venv/Lib/site-packages` en el entorno embebido. Esto incrementó el peso de la distribución a 2.3 GB (por la inclusión de cores científicos como `numpy` y `torch`), pero eliminó fallas de inicialización por dependencias cruzadas.
+
+### Changed
+- **Error de backend offline en equipos limpios:** Se corrigió el fallo crítico `ModuleNotFoundError` (módulos ausentes como `typing_extensions` y `jinja2.sandbox`) que provocaba el cierre del subproceso del servidor de IA al instalar la aplicación en entornos virtuales o sistemas operativos sin dependencias globales previas.
+- **Error de ejecución de subproceso (WinError 2):** Se resolvió el fallo de archivo no encontrado al forzar el copiado físico del ejecutable y la directiva `import site` modificada dentro del entorno portable independiente.
+
 ## [1.1.0] - 2026-06-05
 
 ### Added
